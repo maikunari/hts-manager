@@ -570,13 +570,24 @@ class HTS_Manager {
             true
         );
         
-        // Enqueue styles
-        wp_enqueue_style(
-            'hts-manager-admin',
-            HTS_MANAGER_PLUGIN_URL . 'assets/css/hts-admin.css',
-            array(),
-            HTS_MANAGER_VERSION
-        );
+        // Enqueue different styles based on context
+        if ($hook === 'post.php' || $hook === 'post-new.php') {
+            // Product edit pages - use native WooCommerce styling
+            wp_enqueue_style(
+                'hts-manager-product-tab',
+                HTS_MANAGER_PLUGIN_URL . 'assets/css/hts-product-tab.css',
+                array(),
+                HTS_MANAGER_VERSION
+            );
+        } else {
+            // Admin dashboard pages - use modern card-based styling
+            wp_enqueue_style(
+                'hts-manager-admin',
+                HTS_MANAGER_PLUGIN_URL . 'assets/css/hts-admin.css',
+                array(),
+                HTS_MANAGER_VERSION
+            );
+        }
         
         // Localize script with AJAX data
         wp_localize_script('hts-manager-admin', 'htsManager', array(
@@ -925,7 +936,7 @@ class HTS_Manager {
     public function add_product_data_fields() {
         global $post;
         
-        // Check if product has an HTS code
+        // Get saved values
         $hts_code = get_post_meta($post->ID, '_hts_code', true);
         $country_of_origin = get_post_meta($post->ID, '_country_of_origin', true);
         $hts_confidence = get_post_meta($post->ID, '_hts_confidence', true);
@@ -937,112 +948,53 @@ class HTS_Manager {
         }
         ?>
         <div id="hts_codes_product_data" class="panel woocommerce_options_panel">
-            <div class="hts-manager-fields">
+            <?php wp_nonce_field('hts_product_nonce_action', 'hts_product_nonce'); ?>
+            
+            <div class="options_group">
+                <?php
+                // HTS Code field
+                woocommerce_wp_text_input(array(
+                    'id' => '_hts_code',
+                    'label' => __('HTS Code', 'hts-manager'),
+                    'placeholder' => '0000.00.00.00',
+                    'desc_tip' => false,
+                    'value' => $hts_code
+                ));
+                ?>
                 
-                <?php wp_nonce_field('hts_product_nonce_action', 'hts_product_nonce'); ?>
-                
-                <!-- Usage Counter Display -->
-                <div class="hts-form-group">
-                    <div class="hts-usage-counter">
-                        <div class="hts-usage-stats">
-                            <span class="hts-usage-text">
-                                Classifications: <span class="used"><?php echo $this->get_usage_count(); ?></span>
-                                / <span class="limit"><?php echo $this->is_pro() ? '∞' : $this->get_classification_limit(); ?></span>
-                            </span>
-                            <?php if (!$this->is_pro()): ?>
-                                <div class="hts-progress-container">
-                                    <div class="hts-progress-bar" style="width: <?php echo min(100, round(($this->get_usage_count() / $this->get_classification_limit()) * 100)); ?>%"></div>
-                                </div>
-                            <?php endif; ?>
-                            <?php if (!$this->is_pro()): ?>
-                                <span class="hts-pro-badge">Upgrade to Pro for unlimited</span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Current HTS Code Display -->
-                <?php if (!empty($hts_code)): ?>
-                <div class="current-code-display">
-                    <div class="current-code"><?php echo esc_html($hts_code); ?></div>
-                    <div class="current-description">
-                        <?php 
-                        $description = get_post_meta($post->ID, '_hts_description', true);
-                        echo esc_html($description ? $description : 'No description available');
-                        ?>
-                    </div>
-                    <?php if ($hts_confidence): ?>
-                        <div class="confidence-info">
-                            <?php 
-                            $confidence_percent = round($hts_confidence * 100);
-                            $confidence_class = $confidence_percent >= 85 ? 'high' : ($confidence_percent >= 60 ? 'medium' : 'low');
-                            ?>
-                            <span class="confidence confidence-<?php echo $confidence_class; ?>">
-                                Confidence: <?php echo $confidence_percent; ?>%
-                            </span>
-                            <?php if ($hts_updated): ?>
-                                <span class="updated-date">
-                                    Updated: <?php echo date('M j, Y H:i', strtotime($hts_updated)); ?>
-                                </span>
-                            <?php endif; ?>
-                        </div>
+                <p class="form-field">
+                    <label><?php _e('Generate HTS Code', 'hts-manager'); ?></label>
+                    <button type="button" class="button hts-classify-button" data-product-id="<?php echo $post->ID; ?>">
+                        <span class="dashicons dashicons-update" style="vertical-align: middle;"></span>
+                        <?php _e('Auto-Generate with AI', 'hts-manager'); ?>
+                    </button>
+                    <?php if (!empty($hts_code)): ?>
+                        <a href="#" class="hts-regenerate-link" data-product-id="<?php echo $post->ID; ?>" style="margin-left: 10px;">
+                            <?php _e('Regenerate', 'hts-manager'); ?>
+                        </a>
                     <?php endif; ?>
-                </div>
-                <?php else: ?>
-                <div class="current-code-display">
-                    <div class="no-code">No HTS code assigned</div>
-                    <div class="current-description">Use AI classification or enter manually below</div>
-                </div>
+                </p>
+                
+                <?php if ($hts_confidence): ?>
+                <p class="form-field">
+                    <label><?php _e('Confidence', 'hts-manager'); ?></label>
+                    <span style="color: <?php echo ($hts_confidence >= 0.85) ? '#5bb65b' : (($hts_confidence >= 0.60) ? '#ffb900' : '#dc3232'); ?>; font-weight: bold;">
+                        <?php echo round($hts_confidence * 100); ?>%
+                    </span>
+                    <?php if ($hts_updated): ?>
+                        <span style="color: #666; margin-left: 10px;">
+                            (<?php _e('Updated:', 'hts-manager'); ?> <?php echo date('Y-m-d H:i', strtotime($hts_updated)); ?>)
+                        </span>
+                    <?php endif; ?>
+                </p>
                 <?php endif; ?>
                 
-                <!-- AI Classification Section -->
-                <div class="hts-form-group">
-                    <label><?php _e('AI Classification', 'hts-manager'); ?></label>
-                    <div class="button-group">
-                        <button type="button" class="button button-primary hts-classify-button" data-product-id="<?php echo $post->ID; ?>">
-                            <span class="dashicons dashicons-update"></span>
-                            <?php _e('Generate with AI', 'hts-manager'); ?>
-                        </button>
-                        <?php if (!empty($hts_code)): ?>
-                            <button type="button" class="button hts-regenerate-button" data-product-id="<?php echo $post->ID; ?>">
-                                <span class="dashicons dashicons-controls-repeat"></span>
-                                <?php _e('Regenerate', 'hts-manager'); ?>
-                            </button>
-                        <?php endif; ?>
-                    </div>
-                    <div class="hts-result-container hts-hidden"></div>
-                </div>
-                
-                <!-- Manual Entry Section -->
-                <div class="hts-form-group">
-                    <label for="hts_manual_code"><?php _e('Manual Entry', 'hts-manager'); ?></label>
-                    <input type="text" 
-                           id="hts_manual_code" 
-                           name="_hts_code" 
-                           class="hts-manual-code-input" 
-                           value="<?php echo esc_attr($hts_code); ?>" 
-                           placeholder="0000.00.00.00">
-                    <textarea id="hts_manual_description" 
-                              name="_hts_description" 
-                              class="hts-description-input" 
-                              placeholder="Description of the classification"
-                              rows="3"><?php echo esc_textarea(get_post_meta($post->ID, '_hts_description', true)); ?></textarea>
-                    <div class="button-group">
-                        <button type="button" class="button hts-save-code-button" data-product-id="<?php echo $post->ID; ?>">
-                            <span class="dashicons dashicons-saved"></span>
-                            <?php _e('Save Manual Code', 'hts-manager'); ?>
-                        </button>
-                    </div>
-                </div>
-                
                 <?php
+                // Country of Origin field
                 woocommerce_wp_select(array(
-                    'id'          => '_country_of_origin',
-                    'label'       => __('Country of Origin', 'hts-manager'),
-                    'desc_tip'    => true,
-                    'description' => __('Select the country where this product was manufactured or produced.', 'hts-manager'),
-                    'value'       => $country_of_origin,
-                    'options'     => array(
+                    'id' => '_country_of_origin',
+                    'label' => __('Country of Origin', 'hts-manager'),
+                    'options' => array(
                         'CA' => __('Canada', 'hts-manager'),
                         'US' => __('United States', 'hts-manager'),
                         'MX' => __('Mexico', 'hts-manager'),
@@ -1053,175 +1005,37 @@ class HTS_Manager {
                         'IT' => __('Italy', 'hts-manager'),
                         'JP' => __('Japan', 'hts-manager'),
                         'KR' => __('South Korea', 'hts-manager'),
-                        'TW' => __('Taiwan', 'hts-manager'),
                         'IN' => __('India', 'hts-manager'),
-                        'VN' => __('Vietnam', 'hts-manager'),
-                        'TH' => __('Thailand', 'hts-manager'),
-                        'OTHER' => __('Other', 'hts-manager'),
+                        'AU' => __('Australia', 'hts-manager'),
                     ),
+                    'value' => $country_of_origin
                 ));
                 ?>
+                
+                <div class="hts-result-container" style="display: none;"></div>
             </div>
             
             <div class="options_group">
-                <p style="margin: 10px;">
+                <p style="margin: 12px;">
                     <strong><?php _e('Information:', 'hts-manager'); ?></strong><br>
-                    <?php _e('HTS codes are used for customs declarations and duty calculations when shipping internationally.', 'hts-manager'); ?>
+                    <?php _e('HTS codes are used for customs declarations and duty calculations when shipping internationally.', 'hts-manager'); ?><br>
+                    <?php _e('These codes are automatically included in ShipStation exports for customs forms.', 'hts-manager'); ?>
                 </p>
             </div>
             
+            <?php if (!$this->is_pro() && $this->get_usage_count() >= $this->get_classification_limit()): ?>
+            <div class="options_group" style="background: #fcf8e3; border-left: 4px solid #ffb900;">
+                <p style="margin: 12px;">
+                    <strong><?php _e('Classification Limit Reached', 'hts-manager'); ?></strong><br>
+                    <?php _e('You have used all available classifications in the free version.', 'hts-manager'); ?><br>
+                    <a href="https://sonicpixel.ca/hts-manager-pro/" target="_blank" class="button" style="margin-top: 10px;">
+                        <?php _e('Upgrade to Pro for Unlimited', 'hts-manager'); ?>
+                    </a>
+                </p>
+            </div>
+            <?php endif; ?>
+            
         </div>
-        
-        <script type="text/javascript">
-        jQuery(document).ready(function($) {
-            // Main generate button handler
-            function generateHTSCode(isRegenerate) {
-                var button = $('#hts_generate_code');
-                var spinner = $('#hts_generate_spinner');
-                var message = $('#hts_generate_message');
-                var regenerateLink = $('#hts_regenerate_link');
-                var product_id = <?php echo $post->ID; ?>;
-                
-                // Show spinner, disable button
-                button.prop('disabled', true);
-                if (regenerateLink.length) {
-                    regenerateLink.hide();
-                }
-                spinner.css('display', 'inline-block').addClass('is-active');
-                message.hide().removeClass('success error');
-                
-                // AJAX call
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'hts_generate_single_code',
-                        product_id: product_id,
-                        nonce: '<?php echo wp_create_nonce('hts_generate_nonce'); ?>',
-                        regenerate: isRegenerate ? 1 : 0
-                    },
-                    success: function(response) {
-                        spinner.removeClass('is-active').hide();
-                        
-                        if (response.success) {
-                            // Update the HTS code field
-                            $('#_hts_code').val(response.data.hts_code);
-                            
-                            // Show success message
-                            message.html('<span style="color: green;">✓ Generated: ' + response.data.hts_code + ' (' + Math.round(response.data.confidence * 100) + '% confidence)</span>');
-                            message.addClass('success').show();
-                            
-                            // Keep button disabled since we now have a code
-                            button.prop('disabled', true);
-                            
-                            // Show or create regenerate link
-                            if (!regenerateLink.length) {
-                                button.after(' <a href="#" id="hts_regenerate_link" style="margin-left: 10px; text-decoration: none;">Regenerate</a>');
-                                bindRegenerateHandler();
-                            } else {
-                                regenerateLink.show();
-                            }
-                            
-                            // Add or update confidence display
-                            var confidenceColor = response.data.confidence >= 0.85 ? 'green' : (response.data.confidence >= 0.60 ? 'orange' : 'red');
-                            var existingConfidence = $('.hts-confidence-display');
-                            
-                            if (existingConfidence.length) {
-                                existingConfidence.find('span span').css('color', confidenceColor).text(Math.round(response.data.confidence * 100) + '%');
-                            } else if (response.data.confidence) {
-                                var confidenceHtml = '<p class="form-field hts-confidence-display">' +
-                                    '<label>Confidence</label>' +
-                                    '<span style="margin-left: 10px;">' +
-                                    '<span style="color: ' + confidenceColor + '; font-weight: bold;">' +
-                                    Math.round(response.data.confidence * 100) + '%' +
-                                    '</span></span></p>';
-                                $(confidenceHtml).insertAfter('#hts_generate_message').parent().parent();
-                            }
-                        } else {
-                            var errorMessage = response.data.message;
-                            
-                            // Check if it's an upgrade needed error
-                            if (response.data.upgrade_needed) {
-                                // Show upgrade message with full details
-                                if (response.data.upgrade_html) {
-                                    message.html('<span style="color: red;">✗ ' + errorMessage + '</span>' + response.data.upgrade_html);
-                                } else {
-                                    errorMessage += '<br><a href="https://sonicpixel.ca/hts-manager-pro/" target="_blank" style="color: #2271b1; text-decoration: none;">Upgrade to Pro</a> for unlimited classifications.';
-                                    message.html('<span style="color: red;">✗ ' + errorMessage + '</span>');
-                                }
-                            } else {
-                                message.html('<span style="color: red;">✗ ' + errorMessage + '</span>');
-                            }
-                            
-                            message.addClass('error').show();
-                            
-                            // If usage limit reached, disable button permanently for free version
-                            if (response.data.upgrade_needed) {
-                                button.prop('disabled', true).text('Limit Reached - Upgrade Required');
-                                if (regenerateLink.length) {
-                                    regenerateLink.hide();
-                                }
-                            } else {
-                                // Re-enable button only if no code exists
-                                if (!$('#_hts_code').val()) {
-                                    button.prop('disabled', false);
-                                }
-                                if (regenerateLink.length) {
-                                    regenerateLink.show();
-                                }
-                            }
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        spinner.removeClass('is-active').hide();
-                        
-                        // Re-enable button only if no code exists
-                        if (!$('#_hts_code').val()) {
-                            button.prop('disabled', false);
-                        }
-                        if (regenerateLink.length) {
-                            regenerateLink.show();
-                        }
-                        
-                        message.html('<span style="color: red;">✗ Error: ' + error + '</span>');
-                        message.addClass('error').show();
-                    }
-                });
-            }
-            
-            // Bind regenerate handler
-            function bindRegenerateHandler() {
-                $('#hts_regenerate_link').off('click').on('click', function(e) {
-                    e.preventDefault();
-                    if (confirm('Are you sure you want to regenerate the HTS code? This will overwrite the existing code.')) {
-                        generateHTSCode(true);
-                    }
-                });
-            }
-            
-            // Initial button click handler
-            $('#hts_generate_code').on('click', function(e) {
-                e.preventDefault();
-                generateHTSCode(false);
-            });
-            
-            // Bind regenerate if it exists on load
-            bindRegenerateHandler();
-            
-            // Monitor HTS code field for manual changes
-            $('#_hts_code').on('input', function() {
-                var hasCode = $(this).val().trim().length > 0;
-                $('#hts_generate_code').prop('disabled', hasCode);
-                
-                if (hasCode && !$('#hts_regenerate_link').length) {
-                    $('#hts_generate_code').after(' <a href="#" id="hts_regenerate_link" style="margin-left: 10px; text-decoration: none;">Regenerate</a>');
-                    bindRegenerateHandler();
-                } else if (!hasCode && $('#hts_regenerate_link').length) {
-                    $('#hts_regenerate_link').remove();
-                }
-            });
-        });
-        </script>
         <?php
     }
     

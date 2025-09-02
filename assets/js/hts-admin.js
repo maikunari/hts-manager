@@ -13,6 +13,7 @@ jQuery(document).ready(function($) {
         config: {
             selectors: {
                 classifyButton: '.hts-classify-button',
+                regenerateLink: '.hts-regenerate-link',
                 testApiButton: '.hts-test-api-button',
                 saveCodeButton: '.hts-save-code-button',
                 bulkClassifyButton: '.hts-bulk-classify-button',
@@ -21,7 +22,8 @@ jQuery(document).ready(function($) {
                 resultContainer: '.hts-result-container',
                 loadingSpinner: '.hts-loading-spinner',
                 manualCodeInput: '.hts-manual-code-input',
-                expandToggle: '.hts-expand-toggle'
+                expandToggle: '.hts-expand-toggle',
+                htsCodeField: '#_hts_code'
             },
             classes: {
                 loading: 'hts-loading',
@@ -45,6 +47,9 @@ jQuery(document).ready(function($) {
         bindEvents: function() {
             // Product classification
             $(document).on('click', this.config.selectors.classifyButton, this.handleClassifyProduct.bind(this));
+            
+            // Regenerate link
+            $(document).on('click', this.config.selectors.regenerateLink, this.handleRegenerateCode.bind(this));
             
             // API key testing
             $(document).on('click', this.config.selectors.testApiButton, this.handleTestApiKey.bind(this));
@@ -72,7 +77,7 @@ jQuery(document).ready(function($) {
             
             const button = $(e.currentTarget);
             const productId = button.data('product-id');
-            const resultContainer = button.siblings(this.config.selectors.resultContainer);
+            const resultContainer = button.closest('.form-field').siblings('.hts-result-container');
             
             if (!productId) {
                 this.showError(button, 'Invalid product ID');
@@ -80,38 +85,74 @@ jQuery(document).ready(function($) {
             }
 
             // Check usage limits before proceeding
-            if (!htsManager.isPro && htsManager.usageStats.remaining <= 0) {
-                this.showUpgradePrompt(button, 'You have reached your monthly classification limit.');
+            if (!htsManager.isPro && htsManager.usageStats && htsManager.usageStats.remaining <= 0) {
+                this.showUpgradePrompt(button, 'You have reached your classification limit.');
                 return;
             }
 
-            this.showLoadingState(button, htsManager.strings.classifying);
-            this.hideMessages(resultContainer);
+            this.showLoadingState(button, htsManager.strings.classifying || 'Classifying...');
+            resultContainer.removeClass('hts-success hts-error').hide();
 
             $.ajax({
-                url: htsManager.ajaxUrl,
+                url: htsManager.ajaxUrl || ajaxurl,
                 type: 'POST',
                 data: {
-                    action: 'hts_classify_product',
-                    nonce: htsManager.nonce,
+                    action: 'hts_generate_single_code',
+                    nonce: $('#hts_product_nonce').val() || htsManager.nonce,
                     product_id: productId
                 },
                 success: function(response) {
                     if (response.success) {
-                        this.showClassificationResult(resultContainer, response.data);
-                        this.updateUsageStats(response.data.usage_stats);
-                        this.showSuccess(button, response.data.message);
+                        // Update the HTS code field
+                        $(this.config.selectors.htsCodeField).val(response.data.hts_code);
+                        
+                        // Show success message
+                        resultContainer.addClass('hts-success')
+                            .html('<strong>✓ Generated:</strong> ' + response.data.hts_code + 
+                                  ' (' + Math.round(response.data.confidence * 100) + '% confidence)')
+                            .show();
+                        
+                        // Update or add regenerate link
+                        if (!button.siblings('.hts-regenerate-link').length) {
+                            button.after(' <a href="#" class="hts-regenerate-link" data-product-id="' + productId + '">Regenerate</a>');
+                        }
                     } else {
-                        this.handleAjaxError(button, response.data);
+                        resultContainer.addClass('hts-error')
+                            .html('<strong>✗ Error:</strong> ' + response.data.message)
+                            .show();
+                            
+                        if (response.data.upgrade_needed && response.data.upgrade_html) {
+                            resultContainer.append(response.data.upgrade_html);
+                        }
                     }
                 }.bind(this),
                 error: function(xhr, status, error) {
-                    this.showError(button, 'Network error: ' + error);
+                    resultContainer.addClass('hts-error')
+                        .html('<strong>✗ Error:</strong> ' + error)
+                        .show();
                 }.bind(this),
                 complete: function() {
                     this.hideLoadingState(button);
                 }.bind(this)
             });
+        },
+        
+        // Handle regenerate code
+        handleRegenerateCode: function(e) {
+            e.preventDefault();
+            
+            const link = $(e.currentTarget);
+            const productId = link.data('product-id');
+            
+            if (!confirm('Are you sure you want to regenerate the HTS code? This will overwrite the existing code.')) {
+                return;
+            }
+            
+            // Find the generate button and trigger classification
+            const button = link.siblings('.hts-classify-button');
+            if (button.length) {
+                button.trigger('click');
+            }
         },
 
         // Handle API key testing

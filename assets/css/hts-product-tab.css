@@ -1,0 +1,43 @@
+/**
+ * HTS Manager - WooCommerce Product Tab Styles
+ * Minimal styles for native WooCommerce integration
+ */
+
+/* Hide AJAX result container initially */
+#hts_codes_product_data .hts-result-container {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f7f7f7;
+    border-left: 4px solid #72aee6;
+    display: none;
+}
+
+#hts_codes_product_data .hts-result-container.hts-success {
+    border-left-color: #00a32a;
+}
+
+#hts_codes_product_data .hts-result-container.hts-error {
+    border-left-color: #d63638;
+}
+
+/* Regenerate link styling */
+#hts_codes_product_data .hts-regenerate-link {
+    text-decoration: none;
+}
+
+#hts_codes_product_data .hts-regenerate-link:hover {
+    text-decoration: underline;
+}
+
+/* Loading state */
+#hts_codes_product_data .hts-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+#hts_codes_product_data .spinner {
+    float: none;
+    margin: 0 5px;
+}
+
+/* Keep everything else using WooCommerce defaults */
