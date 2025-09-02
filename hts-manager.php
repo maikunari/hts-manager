@@ -95,6 +95,12 @@ function hts_manager_activate() {
         );
     }
     
+    // Fix any existing confidence values that might be stored incorrectly
+    hts_fix_confidence_values();
+    
+    // Set a flag to indicate the fix has been run
+    update_option('hts_confidence_fix_applied', HTS_MANAGER_VERSION);
+    
     // Check if WooCommerce is active
     if (!class_exists('WooCommerce')) {
         deactivate_plugins(plugin_basename(HTS_MANAGER_PLUGIN_FILE));
@@ -185,6 +191,22 @@ function hts_manager_uninstall() {
 
 // Initialize the plugin
 add_action('plugins_loaded', 'hts_manager_init');
+
+// Check for plugin updates and run migrations if needed
+add_action('admin_init', 'hts_manager_check_version');
+
+/**
+ * Check plugin version and run migrations if needed
+ */
+function hts_manager_check_version() {
+    $last_fix_version = get_option('hts_confidence_fix_applied', '0');
+    
+    // Run fix if it hasn't been applied yet or if the plugin was updated
+    if (version_compare($last_fix_version, '1.5.0', '<')) {
+        hts_fix_confidence_values();
+        update_option('hts_confidence_fix_applied', HTS_MANAGER_VERSION);
+    }
+}
 
 /**
  * Initialize the plugin after all plugins are loaded
@@ -942,6 +964,11 @@ class HTS_Manager {
         $hts_confidence = get_post_meta($post->ID, '_hts_confidence', true);
         $hts_updated = get_post_meta($post->ID, '_hts_updated', true);
         
+        // Normalize confidence if it exists (handle legacy data)
+        if ($hts_confidence) {
+            $hts_confidence = hts_normalize_confidence($hts_confidence);
+        }
+        
         // Default country to Canada if not set
         if (empty($country_of_origin)) {
             $country_of_origin = 'CA';
@@ -1592,6 +1619,70 @@ function hts_ajax_generate_single_code() {
 // PART 3: CLASSIFICATION FUNCTION
 // ===============================================
 
+/**
+ * Normalize confidence value to decimal between 0 and 1
+ * @param mixed $confidence The confidence value from API (could be 0.85, 85, "85%", etc.)
+ * @return float Normalized confidence between 0 and 1
+ */
+function hts_normalize_confidence($confidence) {
+    // Handle null or empty values
+    if (empty($confidence) && $confidence !== 0 && $confidence !== '0') {
+        return 0.85; // Default confidence
+    }
+    
+    // Convert to float, handling string percentages
+    if (is_string($confidence)) {
+        // Remove percentage sign and any whitespace
+        $confidence = trim(str_replace('%', '', $confidence));
+    }
+    
+    $confidence = floatval($confidence);
+    
+    // If confidence is greater than 1, assume it's a percentage
+    if ($confidence > 1) {
+        $confidence = $confidence / 100;
+    }
+    
+    // Ensure confidence is between 0 and 1
+    return max(0, min(1, $confidence));
+}
+
+/**
+ * Fix existing confidence values in database
+ * Run this once to correct any improperly stored confidence values
+ */
+function hts_fix_confidence_values() {
+    global $wpdb;
+    
+    // Get all products with confidence values
+    $results = $wpdb->get_results(
+        "SELECT post_id, meta_value 
+         FROM {$wpdb->postmeta} 
+         WHERE meta_key = '_hts_confidence' 
+         AND meta_value != ''"
+    );
+    
+    $fixed_count = 0;
+    foreach ($results as $row) {
+        $old_value = floatval($row->meta_value);
+        
+        // If confidence is greater than 1, it needs fixing
+        if ($old_value > 1) {
+            $new_value = hts_normalize_confidence($old_value);
+            update_post_meta($row->post_id, '_hts_confidence', $new_value);
+            $fixed_count++;
+            
+            error_log("HTS Manager: Fixed confidence for product {$row->post_id}: {$old_value} -> {$new_value}");
+        }
+    }
+    
+    if ($fixed_count > 0) {
+        error_log("HTS Manager: Fixed {$fixed_count} confidence values");
+    }
+    
+    return $fixed_count;
+}
+
 function hts_classify_product($product_id, $api_key) {
     try {
         // Validate inputs
@@ -1778,12 +1869,18 @@ Respond in this exact JSON format:
                 $result = json_decode($matches[0], true);
                 
                 if (isset($result['hts_code']) && preg_match('/^\d{4}\.\d{2}\.\d{4}$/', $result['hts_code'])) {
+                    // Normalize confidence value using helper function
+                    $result['confidence'] = hts_normalize_confidence(
+                        isset($result['confidence']) ? $result['confidence'] : 0.85
+                    );
+                    
                     // Log successful classification
                     HTS_Error_Handler::log_success(
                         'Product classified successfully',
                         array_merge($context, array(
                             'hts_code' => $result['hts_code'],
-                            'confidence' => $result['confidence']
+                            'confidence' => $result['confidence'],
+                            'confidence_percent' => round($result['confidence'] * 100) . '%'
                         ))
                     );
                     
