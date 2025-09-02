@@ -1,0 +1,112 @@
+# WordPress Plugin .gitignore
+
+# WordPress Core Files (if testing in full WP install)
+/wp-admin/
+/wp-includes/
+/wp-content/
+wp-config.php
+wp-load.php
+wp-settings.php
+wp-blog-header.php
+index.php
+xmlrpc.php
+wp-trackback.php
+wp-comments-post.php
+wp-cron.php
+wp-links-opml.php
+wp-mail.php
+wp-login.php
+wp-signup.php
+
+# Plugin Development
+*.log
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
+
+# Node.js (if using build tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build/Distribution Files
+/build/
+/dist/
+/release/
+*.zip
+
+# Development/Testing Files
+/tests/
+/test/
+phpunit.xml
+.phpunit.result.cache
+/vendor/
+composer.lock
+
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# API Keys and Secrets (IMPORTANT!)
+config.php
+secrets.php
+keys.php
+*-config.php
+
+# WordPress Plugin Specific
+wp-config-sample.php
+.htaccess
+robots.txt
+sitemap.xml
+
+# Documentation that shouldn't be in releases
+/docs/
+DEVELOPMENT.md
+TODO.md
+CHANGELOG.md
+CONTRIBUTING.md
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup Files
+*.bak
+*.backup
+*~
+
+# SVN (WordPress.org uses SVN)
+.svn/
+
+# Git
+.gitattributes
+
+# Plugin Package Files (for distribution)
+*.tar.gz
+*.zip
+
+# Debug Files
+debug.log
+error_log
