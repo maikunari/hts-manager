@@ -1,151 +1,214 @@
 === HTS Manager for WooCommerce ===
 Contributors: mikesewell
-Tags: woocommerce, hts, customs, shipstation, harmonized-tariff-schedule
-Requires at least: 5.8
+Donate link: https://sonicpixel.ca/donate/
+Tags: woocommerce, hts, tariff, customs, ai, classification, trade, compliance, export, import
+Requires at least: 5.0
 Tested up to: 6.4
 Requires PHP: 7.4
-Stable tag: 3.1.0
+Stable tag: 3.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Complete HTS code management system for WooCommerce with AI-powered classification and ShipStation integration.
+AI-powered HTS code generation for WooCommerce products. Essential for US tariff compliance by August 29, 2025 deadline.
 
 == Description ==
 
-HTS Manager automates the classification and management of Harmonized Tariff Schedule (HTS) codes for your WooCommerce products, ensuring smooth international shipping and customs compliance.
+**URGENT: New US tariff regulations take effect August 29, 2025. Ensure your WooCommerce store is compliant with accurate HTS codes.**
+
+HTS Manager for WooCommerce uses advanced AI to automatically generate accurate Harmonized Tariff Schedule (HTS) codes for your products, ensuring compliance with US customs regulations and avoiding costly penalties.
+
+= Why You Need This Plugin =
+
+* **Regulatory Compliance**: Meet the August 29, 2025 US tariff compliance deadline
+* **Avoid Penalties**: Incorrect HTS codes can result in fines, delays, and seized shipments
+* **Save Time**: Generate accurate codes in seconds instead of hours of manual research
+* **AI-Powered Accuracy**: Leverages Claude AI for precise product classification
+* **WooCommerce Integration**: Seamlessly integrates with your existing product workflow
 
 = Key Features =
 
-* **AI-Powered Classification** - Automatically generates HTS codes using Claude AI
-* **ShipStation Integration** - Seamlessly exports codes for customs forms
-* **Dashboard Widget** - Monitor classification status at a glance
-* **Bulk Operations** - Classify multiple products simultaneously
-* **Smart Auto-Generation** - Codes generate automatically when products are published or updated
-* **Confidence Tracking** - See AI confidence levels for each classification
-* **Manual Override** - Edit codes directly when needed
+* **AI-Powered Classification**: Advanced AI analyzes product details and generates accurate HTS codes
+* **Automatic Code Generation**: One-click generation based on product name and description
+* **Manual Override**: Edit and customize codes as needed for specific requirements
+* **Usage Dashboard**: Track your classification history and monitor compliance status
+* **Error Handling**: Comprehensive error management with user-friendly messages
+* **Security First**: Proper nonce validation and data sanitization throughout
+* **WordPress.org Standards**: Follows all WordPress coding standards and best practices
 
-= How It Works =
+= Free vs Pro Version =
 
-1. Install and activate the plugin
-2. Add your Anthropic API key in WooCommerce → HTS Manager
-3. HTS codes auto-generate when you publish/update products
-4. Codes sync automatically with ShipStation for customs forms
+**Free Version (25 Classifications/Month):**
+* AI-powered HTS code generation
+* WooCommerce product integration
+* Basic usage tracking
+* Manual code editing
+* Standard support
+
+**Pro Version (Unlimited Classifications):**
+* Everything in Free version
+* Unlimited monthly classifications
+* Bulk classification tools
+* Advanced reporting features
+* Priority support
+* Regular updates and new features
 
 = Perfect For =
 
-* E-commerce stores shipping internationally
-* Businesses needing customs compliance
-* ShipStation users requiring automated customs forms
-* Anyone dealing with cross-border commerce
+* WooCommerce store owners selling physical products
+* Businesses exporting to international markets
+* Retailers needing tariff compliance
+* Importers managing customs documentation
+* Anyone facing the August 29, 2025 compliance deadline
 
 == Installation ==
 
-1. Upload the `hts-manager` folder to `/wp-content/plugins/`
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Go to WooCommerce → HTS Manager to configure your API key
-4. Enable auto-classification (on by default)
-5. That's it! New products will auto-classify on publish
+= Minimum Requirements =
 
-= Configuration =
+* WordPress 5.0 or greater
+* WooCommerce 5.0 or greater
+* PHP version 7.4 or greater
+* MySQL version 5.0 or greater
 
-**Required:**
-* Anthropic API key (get one at https://console.anthropic.com/)
+= Automatic Installation =
 
-**Optional:**
-* Set confidence threshold for notifications
-* Enable/disable auto-classification
-* Configure default country of origin
+1. Log in to your WordPress dashboard
+2. Navigate to Plugins > Add New
+3. Search for "HTS Manager for WooCommerce"
+4. Click "Install Now" and then "Activate"
+
+= Manual Installation =
+
+1. Download the plugin zip file
+2. Upload to your `/wp-content/plugins/` directory
+3. Unzip the file
+4. Activate the plugin through the 'Plugins' menu in WordPress
+
+= Setup Instructions =
+
+1. **Get Your API Key**: Visit [Anthropic Console](https://console.anthropic.com/) to create a free account and generate your Claude API key
+2. **Configure Settings**: Go to WooCommerce > HTS Manager in your WordPress admin
+3. **Enter API Key**: Add your Anthropic Claude API key in the settings
+4. **Test Connection**: Use the test button to verify your API connection
+5. **Start Classifying**: Navigate to any WooCommerce product and use the HTS classification feature
+
+= API Key Setup =
+
+The plugin requires a Claude API key from Anthropic:
+
+1. Visit [https://console.anthropic.com/](https://console.anthropic.com/)
+2. Sign up for a free account
+3. Navigate to API Keys section
+4. Generate a new API key
+5. Copy the key to your plugin settings
+
+**Note**: Anthropic offers generous free tier usage perfect for small to medium stores.
 
 == Frequently Asked Questions ==
 
-= Do I need an Anthropic API key? =
+= What are HTS codes and why do I need them? =
 
-Yes, you'll need an API key from Anthropic to use the AI classification features. You can get one at https://console.anthropic.com/
-
-= How much does classification cost? =
-
-Each product classification costs approximately $0.003 (less than a penny) through the Anthropic API.
-
-= Will this work with my existing products? =
-
-Yes! The plugin can classify existing products. Just click "Update" on any product without an HTS code, or use the bulk actions feature.
-
-= How does ShipStation integration work? =
-
-The plugin automatically exports HTS codes with your WooCommerce orders. ShipStation picks these up during sync and populates customs forms automatically.
-
-= Can I manually override the AI-generated codes? =
-
-Absolutely! Every product has an HTS Codes tab where you can manually enter or edit codes.
-
-= What happens if a product already has an HTS code? =
-
-The auto-classifier skips products that already have codes. You can use the "Regenerate" option to get a new code if needed.
+HTS (Harmonized Tariff Schedule) codes are standardized numerical codes used to classify traded products for customs and tariff purposes. As of August 29, 2025, accurate HTS codes are required for US tariff compliance.
 
 = How accurate are the AI-generated codes? =
 
-The AI typically achieves 85-95% confidence on most products. Low-confidence classifications are flagged for manual review.
+Our AI system achieves high accuracy by analyzing product names, descriptions, and characteristics. However, we always recommend reviewing generated codes, especially for complex or specialized products.
 
-= Does this slow down product publishing? =
+= Do I need technical knowledge to use this plugin? =
 
-No! Classification happens in the background 5-10 seconds after publishing, so there's no delay in your workflow.
+Not at all! The plugin is designed for easy use by store owners of any technical level. Simply install, add your API key, and start generating codes with one click.
+
+= What happens if I exceed my free monthly limit? =
+
+Free users get 25 classifications per month. After reaching the limit, you'll see upgrade prompts. You can either wait for the next month or upgrade to Pro for unlimited classifications.
+
+= Is my product data secure? =
+
+Yes! We only send necessary product information (name, description) to generate classifications. No sensitive store data or customer information is transmitted.
+
+= Can I edit the generated codes? =
+
+Absolutely! All generated codes can be manually edited and customized to meet your specific requirements.
+
+= What if the plugin doesn't work with my theme? =
+
+The plugin is designed to work with all properly coded WordPress themes and follows WordPress standards. Contact support if you experience any theme conflicts.
+
+= Do you provide support? =
+
+Yes! Free users receive standard support through WordPress.org forums. Pro users get priority email support with faster response times.
+
+= Is there a money-back guarantee? =
+
+Pro subscriptions include a 30-day money-back guarantee. If you're not satisfied, contact us within 30 days for a full refund.
+
+= Will this work with my existing products? =
+
+Yes! The plugin seamlessly integrates with your existing WooCommerce products. You can generate codes for new products or add codes to existing ones.
 
 == Screenshots ==
 
-1. Dashboard widget showing classification status
-2. Product edit screen with HTS Codes tab
-3. AI generation button with confidence display
-4. Settings page with configuration options
-5. Bulk classification in products list
+1. **Product Classification Interface** - One-click HTS code generation directly from your product edit screen
+2. **Usage Dashboard** - Track your classification history and monitor monthly usage limits
+3. **Settings Page** - Simple setup with API key configuration and connection testing
+4. **Generated Code Display** - Clean display of AI-generated HTS codes with edit capabilities
+5. **Upgrade Prompts** - User-friendly upgrade messaging when approaching usage limits
+6. **Error Handling** - Clear error messages and troubleshooting guidance
 
 == Changelog ==
 
-= 3.1.0 =
-* Enhanced security with proper nonce verification
-* Added comprehensive data sanitization and escaping
-* Improved error handling and user feedback
-* Added staff usage guide
-* Removed developer-focused features from UI
-
 = 3.0.0 =
-* Combined all HTS functionality into single plugin
-* Added dashboard widget for status monitoring
-* Implemented auto-generation on product save
-* Added regenerate option for existing codes
-* Improved ShipStation integration
+* Major release with enhanced AI classification engine
+* Added comprehensive error handling and user-friendly messages
+* Implemented pro/free version management system
+* Enhanced WordPress.org compliance and security
+* Added usage tracking and limit management
+* Improved admin interface and user experience
+* Added strategic upgrade messaging for free users
+* Enhanced API error handling and retry logic
+* Added proper nonce security throughout plugin
+* Improved code organization and documentation
+
+= 2.1.0 =
+* Enhanced product integration with WooCommerce
+* Added manual code editing capabilities
+* Improved error messaging and user feedback
+* Added basic usage tracking functionality
+* Enhanced security with proper data sanitization
 
 = 2.0.0 =
-* Added AI-powered classification
-* Integrated with Claude API
-* Added confidence tracking
-* Implemented bulk operations
+* Complete rewrite with AI-powered classification
+* Integration with Anthropic Claude API
+* Automated HTS code generation
+* Enhanced admin interface
+* Added bulk processing capabilities
 
 = 1.0.0 =
 * Initial release
-* Basic HTS code management
-* ShipStation export functionality
+* Basic HTS code management for WooCommerce products
+* Manual code entry and editing
+* Simple admin interface
+* Basic product integration
 
 == Upgrade Notice ==
 
-= 3.1.0 =
-Security enhancements and improved user experience. Recommended update for all users.
-
 = 3.0.0 =
-Major update combining all HTS features into one plugin. Backup before upgrading.
+Major update with enhanced AI engine and WordPress.org compliance. Backup recommended before upgrading.
 
-== Additional Information ==
+= 2.0.0 =
+Significant update introducing AI-powered classification. Please backup your site before upgrading.
 
-= System Requirements =
-
-* WordPress 5.8 or higher
-* WooCommerce 5.0 or higher
-* PHP 7.4 or higher
-* SSL certificate (for API communications)
+== Additional Info ==
 
 = Support =
+* Free Support: [WordPress.org Forums](https://wordpress.org/support/plugin/hts-manager/)
+* Pro Support: priority email support included with Pro subscription
+* Documentation: [Plugin Documentation](https://sonicpixel.ca/hts-manager-docs/)
 
-For support, feature requests, or bug reports, please contact the developer.
+= About the Developer =
+Created by Mike Sewell, a WordPress developer specializing in WooCommerce solutions and regulatory compliance tools.
 
-= Privacy =
+= Privacy Policy =
+This plugin only transmits necessary product information (name, description) to Anthropic's Claude API for classification purposes. No customer data, payment information, or other sensitive store data is ever transmitted or stored externally.
 
-This plugin sends product data to Anthropic's API for classification. No personal customer data is transmitted. Product information is used solely for HTS code generation.
+= Compliance Note =
+While this plugin helps generate HTS codes using advanced AI, final responsibility for code accuracy and tariff compliance remains with the store owner. Always verify codes for your specific use case and consult customs professionals for complex classifications.
