@@ -397,10 +397,17 @@ class HTS_Manager {
                             
                             // Check if it's an upgrade needed error
                             if (response.data.upgrade_needed) {
-                                errorMessage += '<br><a href="#" style="color: #2271b1; text-decoration: none;">Upgrade to Pro</a> for unlimited classifications.';
+                                // Show upgrade message with full details
+                                if (response.data.upgrade_html) {
+                                    message.html('<span style="color: red;">✗ ' + errorMessage + '</span>' + response.data.upgrade_html);
+                                } else {
+                                    errorMessage += '<br><a href="https://sonicpixel.ca/hts-manager-pro/" target="_blank" style="color: #2271b1; text-decoration: none;">Upgrade to Pro</a> for unlimited classifications.';
+                                    message.html('<span style="color: red;">✗ ' + errorMessage + '</span>');
+                                }
+                            } else {
+                                message.html('<span style="color: red;">✗ ' + errorMessage + '</span>');
                             }
                             
-                            message.html('<span style="color: red;">✗ ' + errorMessage + '</span>');
                             message.addClass('error').show();
                             
                             // If usage limit reached, disable button permanently for free version
@@ -496,6 +503,283 @@ class HTS_Manager {
     }
     
     /**
+     * Get upgrade message HTML
+     * @param string $context The context for the upgrade message
+     * @return string HTML for upgrade message
+     */
+    public function get_upgrade_message($context = 'general') {
+        $upgrade_url = 'https://sonicpixel.ca/hts-manager-pro/';
+        
+        switch($context) {
+            case 'limit_reached':
+                return sprintf(
+                    '<div class="hts-upgrade-box" style="background: #fff; border-left: 4px solid #d63638; padding: 20px; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <h3 style="margin-top: 0; color: #d63638;">🚨 Classification Limit Reached</h3>
+                        <p><strong>You\'ve used all 25 free classifications.</strong></p>
+                        <p>Upgrade to HTS Manager Pro to unlock:</p>
+                        <ul style="list-style: disc; margin-left: 20px;">
+                            <li>✅ <strong>Unlimited</strong> classifications</li>
+                            <li>🚀 Bulk processing for multiple products</li>
+                            <li>📊 Export features for reports</li>
+                            <li>⚡ Priority support</li>
+                            <li>🔄 Automatic updates</li>
+                        </ul>
+                        <p style="font-size: 18px; margin: 15px 0;"><strong>One-time payment: $67</strong> <span style="text-decoration: line-through; color: #999;">$97</span></p>
+                        <a href="%s" target="_blank" class="button button-primary button-hero" style="margin-right: 10px;">🚀 Upgrade to Pro Now</a>
+                        <a href="%s" target="_blank" class="button button-secondary">Learn More</a>
+                    </div>',
+                    $upgrade_url,
+                    $upgrade_url
+                );
+                
+            case 'bulk_processing':
+                return sprintf(
+                    '<div class="hts-upgrade-box" style="background: #f0f8ff; border-left: 4px solid #2271b1; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                        <h3 style="margin-top: 0; color: #2271b1;">🎯 Bulk Processing is a Pro Feature</h3>
+                        <p>Process unlimited products at once with HTS Manager Pro!</p>
+                        <div style="display: flex; gap: 20px; margin: 15px 0;">
+                            <div style="flex: 1;">
+                                <h4>Free Version</h4>
+                                <ul style="list-style: none; padding: 0;">
+                                    <li>❌ Max 5 products at once</li>
+                                    <li>❌ 25 total classifications</li>
+                                    <li>❌ Manual processing only</li>
+                                </ul>
+                            </div>
+                            <div style="flex: 1;">
+                                <h4 style="color: #00a32a;">Pro Version</h4>
+                                <ul style="list-style: none; padding: 0;">
+                                    <li>✅ Unlimited bulk processing</li>
+                                    <li>✅ No classification limits</li>
+                                    <li>✅ Queue hundreds at once</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p style="font-size: 16px;"><strong>Special Offer: $67</strong> (Save $30)</p>
+                        <a href="%s" target="_blank" class="button button-primary">Unlock Bulk Processing</a>
+                    </div>',
+                    $upgrade_url
+                );
+                
+            case 'export':
+                return sprintf(
+                    '<div class="hts-upgrade-box" style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                        <h3 style="margin-top: 0; color: #ff9800;">📊 Export Features Available in Pro</h3>
+                        <p>Export your HTS classifications to CSV, Excel, or PDF with Pro!</p>
+                        <ul style="list-style: disc; margin-left: 20px;">
+                            <li>Export complete product catalogs with HTS codes</li>
+                            <li>Generate customs documentation</li>
+                            <li>Create compliance reports</li>
+                            <li>Bulk export for accounting</li>
+                        </ul>
+                        <p><strong>Get Pro for just $67</strong> - Lifetime license, no recurring fees!</p>
+                        <a href="%s" target="_blank" class="button button-primary">Get Export Features</a>
+                    </div>',
+                    $upgrade_url
+                );
+                
+            case 'classification_success':
+                $stats = $this->get_usage_stats();
+                if (!$this->is_pro() && $stats['remaining'] <= 10) {
+                    return sprintf(
+                        '<div class="notice notice-info inline" style="margin-top: 20px;">
+                            <p>💡 <strong>Only %d classifications remaining!</strong> 
+                            <a href="%s" target="_blank">Upgrade to Pro</a> for unlimited classifications - just $67 one-time.</p>
+                        </div>',
+                        $stats['remaining'],
+                        $upgrade_url
+                    );
+                }
+                return '';
+                
+            default:
+                return sprintf(
+                    '<div class="hts-upgrade-cta" style="background: linear-gradient(135deg, #667eea 0%%, #764ba2 100%%); color: white; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
+                        <h3 style="color: white; margin-top: 0;">🚀 Unlock Full Power with HTS Manager Pro</h3>
+                        <p style="font-size: 16px; margin: 10px 0;">Unlimited classifications • Bulk processing • Export features • Priority support</p>
+                        <p style="font-size: 20px; margin: 15px 0;"><strong>One-time payment: $67</strong></p>
+                        <a href="%s" target="_blank" class="button button-hero" style="background: white; color: #667eea; border: none; font-weight: bold;">Upgrade Now & Save $30</a>
+                    </div>',
+                    $upgrade_url
+                );
+        }
+    }
+    
+    /**
+     * Generate friendly limit reached screen
+     * @return string HTML for limit reached screen
+     */
+    public function get_limit_reached_screen() {
+        $stats = $this->get_usage_stats();
+        $upgrade_url = 'https://sonicpixel.ca/hts-manager-pro/';
+        
+        ob_start();
+        ?>
+        <div class="hts-limit-reached-screen" style="max-width: 800px; margin: 40px auto; padding: 0;">
+            <!-- Header Section -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; border-radius: 12px 12px 0 0; text-align: center;">
+                <div style="font-size: 4em; margin-bottom: 20px;">🎉</div>
+                <h1 style="color: white; margin: 0 0 10px 0; font-size: 2.2em;">Congratulations!</h1>
+                <p style="font-size: 1.3em; margin: 0; opacity: 0.9;">You've successfully classified <strong><?php echo $stats['used']; ?> products</strong> with HTS Manager!</p>
+            </div>
+            
+            <!-- Content Section -->
+            <div style="background: white; padding: 40px; border-radius: 0 0 12px 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 40px;">
+                    <h2 style="color: #2c3e50; margin: 0 0 15px 0;">Ready to Unlock More Potential?</h2>
+                    <p style="font-size: 1.1em; color: #666; line-height: 1.6;">
+                        You've reached the free limit of 25 classifications. That's awesome progress! 
+                        Now let's take your HTS management to the next level.
+                    </p>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 40px 0;">
+                    <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e9ecef;">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">📊</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: #28a745; margin-bottom: 5px;"><?php echo $stats['used']; ?></div>
+                        <div style="color: #666; font-size: 0.9em;">Products Classified</div>
+                    </div>
+                    <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 2px solid #e9ecef;">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">⚡</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: #17a2b8; margin-bottom: 5px;">100%</div>
+                        <div style="color: #666; font-size: 0.9em;">Free Limit Used</div>
+                    </div>
+                    <div style="text-align: center; padding: 20px; background: #fff3cd; border-radius: 8px; border: 2px solid #ffeaa7;">
+                        <div style="font-size: 2.5em; margin-bottom: 10px;">🚀</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: #f39c12; margin-bottom: 5px;">∞</div>
+                        <div style="color: #666; font-size: 0.9em;">Pro Limit</div>
+                    </div>
+                </div>
+                
+                <!-- Feature Comparison -->
+                <div style="margin: 40px 0;">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 30px;">See What You're Missing</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <!-- Free Column -->
+                        <div>
+                            <div style="text-align: center; margin-bottom: 20px;">
+                                <h4 style="color: #6c757d; margin: 0;">Free Version</h4>
+                                <div style="background: #6c757d; color: white; padding: 8px 20px; border-radius: 20px; display: inline-block; margin-top: 10px; font-size: 0.9em;">What You Have</div>
+                            </div>
+                            <ul style="list-style: none; padding: 0;">
+                                <li style="padding: 12px; margin: 8px 0; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #dc3545;">
+                                    <span style="color: #dc3545; margin-right: 10px;">✓</span> 25 classifications total
+                                </li>
+                                <li style="padding: 12px; margin: 8px 0; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #dc3545;">
+                                    <span style="color: #dc3545; margin-right: 10px;">✓</span> Manual classification
+                                </li>
+                                <li style="padding: 12px; margin: 8px 0; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #dc3545;">
+                                    <span style="color: #dc3545; margin-right: 10px;">✓</span> Basic support
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Pro Column -->
+                        <div>
+                            <div style="text-align: center; margin-bottom: 20px;">
+                                <h4 style="color: #28a745; margin: 0;">Pro Version</h4>
+                                <div style="background: #28a745; color: white; padding: 8px 20px; border-radius: 20px; display: inline-block; margin-top: 10px; font-size: 0.9em;">Upgrade & Get</div>
+                            </div>
+                            <ul style="list-style: none; padding: 0;">
+                                <li style="padding: 12px; margin: 8px 0; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                                    <span style="color: #28a745; margin-right: 10px;">✓</span> <strong>Unlimited classifications</strong>
+                                </li>
+                                <li style="padding: 12px; margin: 8px 0; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                                    <span style="color: #28a745; margin-right: 10px;">✓</span> <strong>Bulk processing</strong> (hundreds at once)
+                                </li>
+                                <li style="padding: 12px; margin: 8px 0; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                                    <span style="color: #28a745; margin-right: 10px;">✓</span> <strong>Export features</strong> (CSV, Excel, PDF)
+                                </li>
+                                <li style="padding: 12px; margin: 8px 0; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                                    <span style="color: #28a745; margin-right: 10px;">✓</span> <strong>Priority support</strong>
+                                </li>
+                                <li style="padding: 12px; margin: 8px 0; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                                    <span style="color: #28a745; margin-right: 10px;">✓</span> <strong>Automatic updates</strong>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pricing Section -->
+                <div style="text-align: center; margin: 40px 0; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
+                    <h3 style="color: white; margin: 0 0 15px 0;">Special Launch Pricing</h3>
+                    <div style="font-size: 3em; font-weight: bold; margin: 10px 0;">$67</div>
+                    <div style="font-size: 1.2em; opacity: 0.8; margin-bottom: 5px;">
+                        <span style="text-decoration: line-through;">$97</span> Save $30
+                    </div>
+                    <div style="font-size: 1.1em; opacity: 0.9;">One-time payment • Lifetime license • No recurring fees</div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div style="text-align: center; margin: 40px 0;">
+                    <a href="<?php echo esc_url($upgrade_url); ?>" target="_blank" 
+                       class="button button-primary button-hero" 
+                       style="font-size: 1.2em; padding: 15px 40px; margin: 0 10px; text-decoration: none;">
+                        🚀 Upgrade to Pro Now
+                    </a>
+                    <a href="<?php echo esc_url($upgrade_url); ?>" target="_blank" 
+                       class="button button-secondary button-large" 
+                       style="padding: 15px 30px; margin: 0 10px; text-decoration: none;">
+                        Learn More
+                    </a>
+                </div>
+                
+                <!-- Admin Reset Option -->
+                <?php if (current_user_can('manage_options')): ?>
+                <div style="margin-top: 50px; padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                    <h4 style="color: #856404; margin: 0 0 10px 0;">🔧 Admin Testing Options</h4>
+                    <p style="color: #856404; margin: 0 0 15px 0;">For testing purposes only:</p>
+                    <form method="post" style="display: inline;">
+                        <?php wp_nonce_field('hts_reset_usage', 'hts_reset_nonce'); ?>
+                        <input type="submit" name="reset_usage" class="button button-secondary" 
+                               value="Reset Usage Counter" 
+                               onclick="return confirm('This will reset the usage counter to 0. Continue?');">
+                        <span style="color: #856404; margin-left: 15px; font-size: 0.9em;">
+                            This will allow testing the free version again
+                        </span>
+                    </form>
+                </div>
+                <?php endif; ?>
+                
+                <!-- Footer Note -->
+                <div style="text-align: center; margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <p style="color: #666; margin: 0; font-size: 0.95em;">
+                        💡 <strong>Not ready to upgrade?</strong> No problem! You can continue using the free version for viewing existing HTS codes. 
+                        When you're ready for more classifications, Pro will be waiting for you.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <style>
+        .hts-limit-reached-screen {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .hts-limit-reached-screen .button {
+            transition: all 0.3s ease;
+        }
+        .hts-limit-reached-screen .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        @media (max-width: 768px) {
+            .hts-limit-reached-screen > div:first-child,
+            .hts-limit-reached-screen > div:last-child {
+                margin: 20px 10px;
+                padding: 20px;
+            }
+            .hts-limit-reached-screen [style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        </style>
+        <?php
+        return ob_get_clean();
+    }
+    
+    /**
      * Display usage limit admin notices
      */
     public function usage_limit_notices() {
@@ -584,12 +868,23 @@ function hts_ajax_generate_single_code() {
     $can_classify = $hts_manager->can_classify();
     
     if ($can_classify !== true) {
-        // Usage limit reached
+        // Usage limit reached - send detailed upgrade message
         wp_send_json_error(array(
             'message' => $can_classify['message'],
             'upgrade_needed' => true,
             'used' => $can_classify['used'],
-            'limit' => $can_classify['limit']
+            'limit' => $can_classify['limit'],
+            'upgrade_html' => '<div style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 20%, #764ba2 80%); color: white; border-radius: 8px; text-align: center;">
+                <div style="font-size: 2em; margin-bottom: 15px;">🎉</div>
+                <h3 style="color: white; margin: 0 0 10px 0;">Congratulations!</h3>
+                <p style="margin: 0 0 15px 0;">You\'ve successfully classified 25 products!</p>
+                <p style="margin: 0 0 15px 0; opacity: 0.9;">Ready for unlimited classifications?</p>
+                <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 6px; margin: 15px 0;">
+                    <div style="font-size: 1.4em; font-weight: bold;">$67 one-time</div>
+                    <div style="font-size: 0.9em; opacity: 0.8;">Save $30 • Lifetime license</div>
+                </div>
+                <a href="https://sonicpixel.ca/hts-manager-pro/" target="_blank" class="button" style="background: white; color: #667eea; border: none; font-weight: bold; padding: 10px 20px; margin-top: 10px;">🚀 Upgrade Now</a>
+            </div>'
         ));
         return;
     }
@@ -923,7 +1218,7 @@ function hts_manager_settings_page() {
                 <p><strong>Free Version:</strong> <?php echo $stats['used']; ?>/<?php echo $stats['limit']; ?> classifications used 
                 (<?php echo $stats['percentage_used']; ?>%). 
                 <strong><?php echo $stats['remaining']; ?> remaining.</strong>
-                <a href="#" style="text-decoration: none;">Upgrade to Pro</a> for unlimited classifications.</p>
+                <a href="https://sonicpixel.ca/hts-manager-pro/" target="_blank" style="text-decoration: none;">Upgrade to Pro</a> for unlimited classifications.</p>
                 
                 <div style="margin: 10px 0;">
                     <div style="width: 200px; height: 10px; background: #f0f0f0; border-radius: 5px; overflow: hidden;">
@@ -1011,7 +1306,12 @@ function hts_manager_settings_page() {
             </table>
         </form>
         
-        <?php if (!$hts_manager->is_pro()): ?>
+        <?php 
+        // Show limit reached screen if free user has hit the limit
+        if (!$hts_manager->is_pro() && $stats['remaining'] <= 0): 
+            echo $hts_manager->get_limit_reached_screen();
+        elseif (!$hts_manager->is_pro()): 
+        ?>
         <hr>
         
         <h2>Usage Management</h2>
@@ -1101,6 +1401,15 @@ function hts_manager_settings_page() {
             echo '<button class="button button-primary button-large" id="hts-classify-all-missing" data-product-ids="' . esc_attr(implode(',', $all_products_without_codes)) . '">';
             echo '🚀 Classify All ' . $total_without_codes . ' Products';
             echo '</button>';
+            
+            // Export button (pro feature)
+            $hts_manager_export = new HTS_Manager();
+            if (!$hts_manager_export->is_pro()) {
+                echo '<button class="button button-secondary button-large" id="hts-export-pro" style="margin-left: 10px;" disabled>';
+                echo '📊 Export Classifications (Pro)';
+                echo '</button>';
+            }
+            
             echo '<span id="hts-bulk-progress" style="display: none; margin-left: 15px;"></span>';
             echo '<div id="hts-bulk-status" style="margin-top: 10px; display: none;"></div>';
             echo '</div>';
@@ -1188,6 +1497,45 @@ function hts_manager_settings_page() {
                         error: function() {
                             button.text('✗ Error').css('color', 'red');
                             button.prop('disabled', false);
+                        }
+                    });
+                });
+                
+                // Export button handler (Pro feature)
+                $('#hts-export-pro').on('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Show upgrade modal
+                    var upgradeModal = '<div id="hts-export-upgrade-modal" style="' +
+                        'position: fixed; top: 0; left: 0; width: 100%; height: 100%; ' +
+                        'background: rgba(0,0,0,0.7); z-index: 100000; display: flex; ' +
+                        'align-items: center; justify-content: center;">' +
+                        '<div style="background: white; padding: 40px; border-radius: 8px; max-width: 600px; margin: 20px; position: relative;">' +
+                        '<button id="close-upgrade-modal" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>' +
+                        '<h2 style="margin-top: 0; color: #ff9800;">📊 Export Features - Pro Only</h2>' +
+                        '<p>Export your HTS classifications in multiple formats with HTS Manager Pro!</p>' +
+                        '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">' +
+                        '<div><h4>📈 Free Version</h4><ul style="list-style: none; padding: 0;"><li>❌ No export features</li><li>❌ Manual copy/paste only</li><li>❌ Limited to 25 classifications</li></ul></div>' +
+                        '<div><h4 style="color: #00a32a;">🚀 Pro Version</h4><ul style="list-style: none; padding: 0;"><li>✅ CSV export</li><li>✅ Excel export</li><li>✅ PDF reports</li><li>✅ Unlimited classifications</li></ul></div>' +
+                        '</div>' +
+                        '<div style="text-align: center; margin-top: 30px;">' +
+                        '<p style="font-size: 18px; margin-bottom: 15px;"><strong>Special Price: $67</strong> <span style="text-decoration: line-through; color: #999;">$97</span></p>' +
+                        '<a href="https://sonicpixel.ca/hts-manager-pro/" target="_blank" class="button button-primary button-hero" style="margin-right: 15px;">🚀 Get Pro Now</a>' +
+                        '<button id="maybe-later" class="button button-secondary">Maybe Later</button>' +
+                        '</div>' +
+                        '</div></div>';
+                    
+                    $('body').append(upgradeModal);
+                    
+                    // Close modal handlers
+                    $('#close-upgrade-modal, #maybe-later').on('click', function() {
+                        $('#hts-export-upgrade-modal').remove();
+                    });
+                    
+                    // Close on backdrop click
+                    $('#hts-export-upgrade-modal').on('click', function(e) {
+                        if (e.target === this) {
+                            $(this).remove();
                         }
                     });
                 });
@@ -1410,8 +1758,10 @@ function hts_handle_bulk_classify($redirect_to, $action, $post_ids) {
     if (!$hts_manager->is_pro()) {
         $bulk_limit = $hts_manager->get_bulk_limit();
         if ($bulk_limit > 0 && count($post_ids) > $bulk_limit) {
+            $original_count = count($post_ids);
             $post_ids = array_slice($post_ids, 0, $bulk_limit);
             $redirect_to = add_query_arg('hts_limited', $bulk_limit, $redirect_to);
+            $redirect_to = add_query_arg('hts_attempted', $original_count, $redirect_to);
         }
     }
     
@@ -1438,10 +1788,23 @@ function hts_bulk_classify_notice() {
     // Show upgrade notice if bulk operation was limited
     if (!empty($_REQUEST['hts_limited'])) {
         $limit = intval($_REQUEST['hts_limited']);
-        echo '<div class="notice notice-warning is-dismissible"><p>';
-        echo '<strong>Limited to ' . $limit . ' products.</strong> ';
-        echo '<a href="#" style="text-decoration: none;">Upgrade to Pro</a> for unlimited bulk operations.';
-        echo '</p></div>';
+        $attempted = !empty($_REQUEST['hts_attempted']) ? intval($_REQUEST['hts_attempted']) : 0;
+        $hts_manager = new HTS_Manager();
+        
+        if (!$hts_manager->is_pro()) {
+            echo '<div class="notice notice-warning is-dismissible">';
+            echo '<h3 style="margin: 10px 0;">🎯 Bulk Processing Limited</h3>';
+            echo '<p>You selected <strong>' . $attempted . ' products</strong> but the free version is limited to <strong>' . $limit . ' products</strong> per bulk operation.</p>';
+            echo '<p><strong>Upgrade to Pro</strong> for unlimited bulk processing:</p>';
+            echo '<ul style="list-style: disc; margin-left: 20px;">';
+            echo '<li>Process hundreds of products at once</li>';
+            echo '<li>No classification limits (currently 25 max)</li>';
+            echo '<li>Export features included</li>';
+            echo '</ul>';
+            echo '<p><a href="https://sonicpixel.ca/hts-manager-pro/" target="_blank" class="button button-primary">Upgrade to Pro - $67</a> ';
+            echo '<span style="color: #666;">One-time payment, lifetime license</span></p>';
+            echo '</div>';
+        }
     }
 }
 
