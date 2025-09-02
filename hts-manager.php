@@ -1,10 +1,31 @@
 <?php
 /**
  * Plugin Name: HTS Manager for WooCommerce
- * Description: Complete HTS code management - display and auto-classify HTS codes
+ * Plugin URI: https://sonicpixel.ca/hts-manager-pro/
+ * Description: AI-powered HTS code generation for WooCommerce compliance. Automatically classify products with Harmonized Tariff Schedule codes using AI technology.
  * Version: 3.0.0
  * Author: Mike Sewell
+ * Author URI: https://sonicpixel.ca/
+ * Text Domain: hts-manager
+ * Domain Path: /languages
+ * Requires at least: 5.0
+ * Tested up to: 6.4
+ * Requires PHP: 7.4
+ * WC requires at least: 5.0
+ * WC tested up to: 8.5
  * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Network: false
+ *
+ * HTS Manager is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * any later version.
+ *
+ * HTS Manager is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
 // Prevent direct access
@@ -12,16 +33,320 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Check if WooCommerce is active
+if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+    add_action('admin_notices', 'hts_manager_wc_missing_notice');
+    return;
+}
+
+/**
+ * Notice when WooCommerce is not active
+ */
+function hts_manager_wc_missing_notice() {
+    /* translators: %s: WooCommerce plugin name */
+    echo '<div class="error"><p><strong>' . sprintf(esc_html__('HTS Manager requires %s to be installed and active.', 'hts-manager'), '<a href="https://woocommerce.com/" target="_blank">WooCommerce</a>') . '</strong></p></div>';
+}
+
+// Define plugin constants
+if (!defined('HTS_MANAGER_VERSION')) {
+    define('HTS_MANAGER_VERSION', '3.0.0');
+}
+if (!defined('HTS_MANAGER_PLUGIN_FILE')) {
+    define('HTS_MANAGER_PLUGIN_FILE', __FILE__);
+}
+if (!defined('HTS_MANAGER_PLUGIN_DIR')) {
+    define('HTS_MANAGER_PLUGIN_DIR', plugin_dir_path(__FILE__));
+}
+if (!defined('HTS_MANAGER_PLUGIN_URL')) {
+    define('HTS_MANAGER_PLUGIN_URL', plugin_dir_url(__FILE__));
+}
+
 // Define pro version flag - set to true for pro version
 if (!defined('HTS_MANAGER_PRO')) {
     define('HTS_MANAGER_PRO', false);
 }
 
+// Register activation and deactivation hooks
+register_activation_hook(HTS_MANAGER_PLUGIN_FILE, 'hts_manager_activate');
+register_deactivation_hook(HTS_MANAGER_PLUGIN_FILE, 'hts_manager_deactivate');
+register_uninstall_hook(HTS_MANAGER_PLUGIN_FILE, 'hts_manager_uninstall');
+
+/**
+ * Plugin activation hook
+ */
+function hts_manager_activate() {
+    // Check minimum WordPress version
+    if (version_compare(get_bloginfo('version'), '5.0', '<')) {
+        deactivate_plugins(plugin_basename(HTS_MANAGER_PLUGIN_FILE));
+        wp_die(
+            esc_html__('HTS Manager requires WordPress 5.0 or higher. Please upgrade WordPress and try again.', 'hts-manager'),
+            esc_html__('Plugin Activation Error', 'hts-manager'),
+            array('back_link' => true)
+        );
+    }
+    
+    // Check minimum PHP version
+    if (version_compare(PHP_VERSION, '7.4', '<')) {
+        deactivate_plugins(plugin_basename(HTS_MANAGER_PLUGIN_FILE));
+        wp_die(
+            esc_html__('HTS Manager requires PHP 7.4 or higher. Please upgrade PHP and try again.', 'hts-manager'),
+            esc_html__('Plugin Activation Error', 'hts-manager'),
+            array('back_link' => true)
+        );
+    }
+    
+    // Check if WooCommerce is active
+    if (!class_exists('WooCommerce')) {
+        deactivate_plugins(plugin_basename(HTS_MANAGER_PLUGIN_FILE));
+        wp_die(
+            esc_html__('HTS Manager requires WooCommerce to be installed and active.', 'hts-manager'),
+            esc_html__('Plugin Activation Error', 'hts-manager'),
+            array('back_link' => true)
+        );
+    }
+    
+    // Create default options
+    add_option('hts_anthropic_api_key', '');
+    add_option('hts_auto_classify_enabled', '1');
+    add_option('hts_confidence_threshold', 0.60);
+    add_option('hts_classification_usage_count', 0);
+    
+    // Flush rewrite rules
+    flush_rewrite_rules();
+    
+    // Set activation flag for welcome message
+    set_transient('hts_manager_activated', true, 60);
+}
+
+/**
+ * Plugin deactivation hook
+ */
+function hts_manager_deactivate() {
+    // Clear scheduled events
+    wp_clear_scheduled_hook('hts_classify_product_cron');
+    
+    // Clear transients
+    delete_transient('hts_manager_activated');
+    
+    // Flush rewrite rules
+    flush_rewrite_rules();
+}
+
+/**
+ * Plugin uninstall hook
+ */
+function hts_manager_uninstall() {
+    // Only run if user has capability
+    if (!current_user_can('activate_plugins')) {
+        return;
+    }
+    
+    // Check if we should delete data
+    if (get_option('hts_manager_delete_data_on_uninstall', false)) {
+        // Remove options
+        delete_option('hts_anthropic_api_key');
+        delete_option('hts_auto_classify_enabled');
+        delete_option('hts_confidence_threshold');
+        delete_option('hts_classification_usage_count');
+        delete_option('hts_last_classification_time');
+        delete_option('hts_manager_delete_data_on_uninstall');
+        
+        // Remove post meta for all products
+        global $wpdb;
+        $wpdb->delete(
+            $wpdb->postmeta,
+            array(
+                'meta_key' => '_hts_code'
+            )
+        );
+        $wpdb->delete(
+            $wpdb->postmeta,
+            array(
+                'meta_key' => '_hts_confidence'
+            )
+        );
+        $wpdb->delete(
+            $wpdb->postmeta,
+            array(
+                'meta_key' => '_hts_updated'
+            )
+        );
+        $wpdb->delete(
+            $wpdb->postmeta,
+            array(
+                'meta_key' => '_country_of_origin'
+            )
+        );
+        
+        // Clear any remaining transients
+        $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_hts_%' OR option_name LIKE '_transient_timeout_hts_%'");
+    }
+}
+
 // Initialize the plugin
 add_action('plugins_loaded', 'hts_manager_init');
+
+/**
+ * Initialize the plugin after all plugins are loaded
+ */
 function hts_manager_init() {
+    // Load text domain for translations
+    load_plugin_textdomain('hts-manager', false, dirname(plugin_basename(HTS_MANAGER_PLUGIN_FILE)) . '/languages');
+    
+    // Initialize the main plugin class
     if (class_exists('WooCommerce')) {
         new HTS_Manager();
+    }
+}
+
+/**
+ * Error handling and logging class
+ */
+class HTS_Error_Handler {
+    
+    /**
+     * Log error and return user-friendly message
+     */
+    public static function handle_error($error_type, $technical_message = '', $context = array()) {
+        // Log technical details for debugging
+        self::log_error($error_type, $technical_message, $context);
+        
+        // Return user-friendly message
+        return self::get_user_friendly_message($error_type, $context);
+    }
+    
+    /**
+     * Get user-friendly error messages
+     */
+    public static function get_user_friendly_message($error_type, $context = array()) {
+        $messages = array(
+            'api_key_missing' => array(
+                'message' => __('API key is missing. Please add your Anthropic API key in the HTS Manager settings.', 'hts-manager'),
+                'action' => __('Go to WooCommerce → HTS Manager to add your API key.', 'hts-manager'),
+                'type' => 'error'
+            ),
+            'api_key_invalid' => array(
+                'message' => __('API key appears to be invalid. Please check your Anthropic API key.', 'hts-manager'),
+                'action' => __('Verify your API key is correct in the HTS Manager settings.', 'hts-manager'),
+                'type' => 'error'
+            ),
+            'network_error' => array(
+                'message' => __('Unable to connect to the classification service. Please check your internet connection.', 'hts-manager'),
+                'action' => __('Try again in a few moments. If the problem persists, contact support.', 'hts-manager'),
+                'type' => 'error'
+            ),
+            'api_rate_limit' => array(
+                'message' => __('Too many requests. The classification service is temporarily limiting requests.', 'hts-manager'),
+                'action' => __('Please wait a few minutes before trying again.', 'hts-manager'),
+                'type' => 'warning'
+            ),
+            'product_data_invalid' => array(
+                'message' => __('Product information is incomplete. Please ensure the product has a name and description.', 'hts-manager'),
+                'action' => __('Add more product details and try classifying again.', 'hts-manager'),
+                'type' => 'warning'
+            ),
+            'classification_failed' => array(
+                'message' => __('Unable to generate an HTS code for this product. The AI service encountered an issue.', 'hts-manager'),
+                'action' => __('Try again, or contact support if the problem continues.', 'hts-manager'),
+                'type' => 'error'
+            ),
+            'server_error' => array(
+                'message' => __('The classification service is temporarily unavailable.', 'hts-manager'),
+                'action' => __('Please try again later. Service should resume shortly.', 'hts-manager'),
+                'type' => 'error'
+            ),
+            'quota_exceeded' => array(
+                'message' => __('API usage limit reached. Your Anthropic account may have exceeded its quota.', 'hts-manager'),
+                'action' => __('Check your Anthropic account billing and usage limits.', 'hts-manager'),
+                'type' => 'error'
+            ),
+            'success' => array(
+                'message' => __('HTS code generated successfully!', 'hts-manager'),
+                'action' => '',
+                'type' => 'success'
+            )
+        );
+        
+        if (isset($messages[$error_type])) {
+            $message = $messages[$error_type];
+            
+            // Add context-specific information
+            if (!empty($context['product_name'])) {
+                $message['message'] = sprintf(__('Product "%s": %s', 'hts-manager'), $context['product_name'], $message['message']);
+            }
+            
+            return $message;
+        }
+        
+        // Default fallback message
+        return array(
+            'message' => __('An unexpected error occurred during HTS classification.', 'hts-manager'),
+            'action' => __('Please try again. If the problem persists, contact support.', 'hts-manager'),
+            'type' => 'error'
+        );
+    }
+    
+    /**
+     * Enhanced logging with context
+     */
+    public static function log_error($error_type, $technical_message = '', $context = array()) {
+        $log_message = sprintf(
+            '[HTS Manager] Error Type: %s | Message: %s | Context: %s | Time: %s | User: %s',
+            $error_type,
+            $technical_message,
+            wp_json_encode($context),
+            current_time('Y-m-d H:i:s'),
+            get_current_user_id()
+        );
+        
+        error_log($log_message);
+        
+        // Also log to WordPress debug if enabled
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+            error_log($log_message);
+        }
+    }
+    
+    /**
+     * Log successful operations
+     */
+    public static function log_success($operation, $context = array()) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $log_message = sprintf(
+                '[HTS Manager] SUCCESS: %s | Context: %s | Time: %s | User: %s',
+                $operation,
+                wp_json_encode($context),
+                current_time('Y-m-d H:i:s'),
+                get_current_user_id()
+            );
+            
+            error_log($log_message);
+        }
+    }
+    
+    /**
+     * Create admin notice for user feedback
+     */
+    public static function create_admin_notice($message_data, $dismissible = true) {
+        $notice_class = 'notice notice-' . $message_data['type'];
+        if ($dismissible) {
+            $notice_class .= ' is-dismissible';
+        }
+        
+        $html = sprintf(
+            '<div class="%s"><p><strong>%s</strong></p>',
+            esc_attr($notice_class),
+            esc_html($message_data['message'])
+        );
+        
+        if (!empty($message_data['action'])) {
+            $html .= sprintf('<p>%s</p>', esc_html($message_data['action']));
+        }
+        
+        $html .= '</div>';
+        
+        return $html;
     }
 }
 
@@ -202,6 +527,7 @@ class HTS_Manager {
         // PART 8: ADMIN NOTICES
         add_action('admin_notices', array($this, 'product_save_notices'));
         add_action('admin_notices', array($this, 'usage_limit_notices'));
+        add_action('admin_notices', array($this, 'auto_classification_error_notices'));
         
     }
     
@@ -832,6 +1158,66 @@ class HTS_Manager {
             <?php
         }
     }
+    
+    /**
+     * Display admin notices for auto-classification errors
+     */
+    public function auto_classification_error_notices() {
+        // Only show to administrators
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        
+        // Only show on relevant pages
+        $screen = get_current_screen();
+        if (!$screen || !in_array($screen->id, ['dashboard', 'edit-product', 'woocommerce_page_hts-manager'])) {
+            return;
+        }
+        
+        // Check for auto-classification errors
+        $error_products = get_transient('hts_auto_classify_errors');
+        if (empty($error_products)) {
+            return;
+        }
+        
+        // Limit display to most recent errors
+        $error_products = array_slice($error_products, -5, 5, true);
+        
+        ?>
+        <div class="notice notice-warning is-dismissible hts-auto-error-notice">
+            <h3><?php esc_html_e('HTS Auto-Classification Issues', 'hts-manager'); ?></h3>
+            <p><?php esc_html_e('Some products could not be automatically classified:', 'hts-manager'); ?></p>
+            <ul style="list-style: disc; margin-left: 20px;">
+                <?php foreach ($error_products as $product_id => $error_info): ?>
+                <li>
+                    <strong><?php echo esc_html($error_info['product_name']); ?></strong>: 
+                    <?php echo esc_html($error_info['error']); ?>
+                    <small style="color: #666;">
+                        (<?php echo esc_html(human_time_diff(strtotime($error_info['time']), current_time('timestamp'))); ?> ago)
+                    </small>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <p>
+                <a href="<?php echo esc_url(admin_url('admin.php?page=hts-manager')); ?>" class="button button-secondary">
+                    <?php esc_html_e('View HTS Manager Settings', 'hts-manager'); ?>
+                </a>
+                <button type="button" class="button button-link" onclick="this.closest('.notice').style.display='none';">
+                    <?php esc_html_e('Dismiss', 'hts-manager'); ?>
+                </button>
+            </p>
+        </div>
+        
+        <script>
+        jQuery(document).ready(function($) {
+            // Auto-dismiss after 30 seconds
+            setTimeout(function() {
+                $('.hts-auto-error-notice').fadeOut();
+            }, 30000);
+        });
+        </script>
+        <?php
+    }
 }
 
 // ===============================================
@@ -846,20 +1232,21 @@ class HTS_Manager {
 add_action('wp_ajax_hts_generate_single_code', 'hts_ajax_generate_single_code');
 function hts_ajax_generate_single_code() {
     // Verify nonce
-    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'hts_generate_nonce')) {
-        wp_send_json_error(array('message' => 'Security check failed'));
+    if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'hts_generate_nonce')) {
+        wp_send_json_error(array('message' => esc_html__('Security check failed', 'hts-manager')));
         return;
     }
     
     // Check permissions
     if (!current_user_can('edit_products')) {
-        wp_send_json_error(array('message' => 'Insufficient permissions'));
+        wp_send_json_error(array('message' => esc_html__('Insufficient permissions', 'hts-manager')));
         return;
     }
     
-    $product_id = intval($_POST['product_id']);
-    if (!$product_id) {
-        wp_send_json_error(array('message' => 'Invalid product ID'));
+    // Validate and sanitize product ID
+    $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
+    if (!$product_id || get_post_type($product_id) !== 'product') {
+        wp_send_json_error(array('message' => esc_html__('Invalid product ID', 'hts-manager')));
         return;
     }
     
@@ -903,28 +1290,68 @@ function hts_ajax_generate_single_code() {
         return;
     }
     
-    // Generate HTS code
+    // Generate HTS code with comprehensive error handling
     $result = hts_classify_product($product_id, $api_key);
     
-    if ($result && isset($result['hts_code'])) {
-        // Save the results
-        update_post_meta($product_id, '_hts_code', $result['hts_code']);
-        update_post_meta($product_id, '_hts_confidence', $result['confidence']);
-        update_post_meta($product_id, '_hts_updated', current_time('mysql'));
-        update_post_meta($product_id, '_country_of_origin', 'CA');
-        
-        // Increment usage counter for free version tracking
-        if (!$hts_manager->is_pro()) {
-            $new_count = $hts_manager->increment_usage();
-        }
-        
-        wp_send_json_success(array(
-            'hts_code' => $result['hts_code'],
-            'confidence' => $result['confidence'],
-            'reasoning' => $result['reasoning'] ?? ''
+    // Check if result is an error (new error handling format)
+    if (isset($result['type']) && $result['type'] === 'error') {
+        wp_send_json_error(array(
+            'message' => $result['message'],
+            'action' => $result['action'] ?? '',
+            'upgrade_needed' => false
         ));
+        return;
+    }
+    
+    // Check for successful classification (backward compatibility)
+    if ($result && isset($result['hts_code'])) {
+        try {
+            // Save the results
+            update_post_meta($product_id, '_hts_code', sanitize_text_field($result['hts_code']));
+            update_post_meta($product_id, '_hts_confidence', floatval($result['confidence']));
+            update_post_meta($product_id, '_hts_updated', current_time('mysql'));
+            update_post_meta($product_id, '_country_of_origin', 'CA');
+            
+            // Increment usage counter for free version tracking
+            if (!$hts_manager->is_pro()) {
+                $new_count = $hts_manager->increment_usage();
+            }
+            
+            // Log the successful operation
+            HTS_Error_Handler::log_success(
+                'AJAX classification completed',
+                array(
+                    'product_id' => $product_id,
+                    'hts_code' => $result['hts_code'],
+                    'confidence' => $result['confidence']
+                )
+            );
+            
+            wp_send_json_success(array(
+                'hts_code' => $result['hts_code'],
+                'confidence' => $result['confidence'],
+                'reasoning' => $result['reasoning'] ?? '',
+                'message' => __('HTS code generated successfully!', 'hts-manager')
+            ));
+            
+        } catch (Exception $e) {
+            HTS_Error_Handler::log_error(
+                'ajax_save_error',
+                'Failed to save classification results: ' . $e->getMessage(),
+                array('product_id' => $product_id)
+            );
+            
+            wp_send_json_error(array(
+                'message' => __('Classification generated but failed to save. Please try again.', 'hts-manager')
+            ));
+        }
     } else {
-        wp_send_json_error(array('message' => 'Failed to generate HTS code. Please try again.'));
+        // Fallback for unexpected result format
+        $error_data = HTS_Error_Handler::get_user_friendly_message('classification_failed');
+        wp_send_json_error(array(
+            'message' => $error_data['message'],
+            'action' => $error_data['action']
+        ));
     }
 }
 
@@ -933,10 +1360,37 @@ function hts_ajax_generate_single_code() {
 // ===============================================
 
 function hts_classify_product($product_id, $api_key) {
-    $product = wc_get_product($product_id);
-    if (!$product) {
-        return false;
-    }
+    try {
+        // Validate inputs
+        if (!$product_id || !is_numeric($product_id)) {
+            return HTS_Error_Handler::handle_error(
+                'product_data_invalid',
+                'Invalid product ID provided',
+                array('product_id' => $product_id)
+            );
+        }
+        
+        if (empty($api_key) || !is_string($api_key)) {
+            return HTS_Error_Handler::handle_error(
+                'api_key_missing',
+                'API key is empty or invalid',
+                array('api_key_length' => strlen($api_key))
+            );
+        }
+        
+        $product = wc_get_product($product_id);
+        if (!$product || !is_a($product, 'WC_Product')) {
+            return HTS_Error_Handler::handle_error(
+                'product_data_invalid',
+                'Product not found or invalid',
+                array('product_id' => $product_id)
+            );
+        }
+        
+        $context = array(
+            'product_id' => $product_id,
+            'product_name' => $product->get_name()
+        );
     
     // Prepare product data
     $product_data = array(
@@ -973,49 +1427,166 @@ Respond in this exact JSON format:
     \"reasoning\": \"Brief explanation\"
 }";
     
-    // Call Claude API
+        // Validate product has sufficient data
+        $product_name = $product->get_name();
+        $product_description = $product->get_description() ?: $product->get_short_description();
+        
+        if (empty($product_name) || strlen(trim($product_name)) < 3) {
+            return HTS_Error_Handler::handle_error(
+                'product_data_invalid',
+                'Product name too short or missing',
+                array_merge($context, array('name_length' => strlen($product_name)))
+            );
+        }
+    
+    // Call Claude API with comprehensive error handling
     $response = wp_remote_post('https://api.anthropic.com/v1/messages', array(
         'headers' => array(
             'Content-Type' => 'application/json',
-            'x-api-key' => $api_key,
+            'x-api-key' => sanitize_text_field($api_key),
             'anthropic-version' => '2023-06-01',
+            'User-Agent' => 'HTS-Manager/' . HTS_MANAGER_VERSION . ' WordPress/' . get_bloginfo('version')
         ),
-        'body' => json_encode(array(
+        'body' => wp_json_encode(array(
             'model' => 'claude-3-5-sonnet-20241022',
             'max_tokens' => 500,
             'temperature' => 0.2,
             'messages' => array(
                 array(
                     'role' => 'user',
-                    'content' => $prompt
+                    'content' => wp_kses_post($prompt)
                 )
             )
         )),
-        'timeout' => 30
+        'timeout' => 45,
+        'sslverify' => true,
+        'httpversion' => '1.1'
     ));
     
-    if (is_wp_error($response)) {
-        error_log('HTS Manager: API call failed - ' . $response->get_error_message());
-        return false;
-    }
-    
-    $body = wp_remote_retrieve_body($response);
-    $data = json_decode($body, true);
-    
-    if (isset($data['content'][0]['text'])) {
-        $response_text = $data['content'][0]['text'];
-        
-        // Extract JSON from response
-        if (preg_match('/\{.*\}/s', $response_text, $matches)) {
-            $result = json_decode($matches[0], true);
+        if (is_wp_error($response)) {
+            $error_message = $response->get_error_message();
             
-            if (isset($result['hts_code']) && preg_match('/^\d{4}\.\d{2}\.\d{4}$/', $result['hts_code'])) {
-                return $result;
+            // Determine specific error type
+            $error_type = 'network_error';
+            if (strpos($error_message, 'cURL error 6') !== false || strpos($error_message, 'name resolution') !== false) {
+                $error_type = 'network_error';
+            } elseif (strpos($error_message, 'timeout') !== false) {
+                $error_type = 'network_error';
+            }
+            
+            return HTS_Error_Handler::handle_error(
+                $error_type,
+                'WordPress HTTP API error: ' . $error_message,
+                $context
+            );
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        
+        // Handle specific HTTP error codes
+        if ($response_code !== 200) {
+            $error_type = 'server_error';
+            $technical_msg = 'HTTP ' . $response_code . ': ' . $body;
+            
+            switch ($response_code) {
+                case 401:
+                    $error_type = 'api_key_invalid';
+                    break;
+                case 402:
+                    $error_type = 'quota_exceeded';
+                    break;
+                case 429:
+                    $error_type = 'api_rate_limit';
+                    break;
+                case 500:
+                case 502:
+                case 503:
+                case 504:
+                    $error_type = 'server_error';
+                    break;
+                default:
+                    $error_type = 'classification_failed';
+                    break;
+            }
+            
+            return HTS_Error_Handler::handle_error(
+                $error_type,
+                $technical_msg,
+                array_merge($context, array('http_code' => $response_code))
+            );
+        }
+        
+        // Validate response has content
+        if (empty($body)) {
+            return HTS_Error_Handler::handle_error(
+                'classification_failed',
+                'Empty API response body',
+                $context
+            );
+        }
+        
+        $data = json_decode($body, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return HTS_Error_Handler::handle_error(
+                'classification_failed',
+                'JSON decode error: ' . json_last_error_msg(),
+                array_merge($context, array('response_body' => substr($body, 0, 200)))
+            );
+        }
+        
+        // Process API response
+        if (isset($data['content'][0]['text'])) {
+            $response_text = $data['content'][0]['text'];
+            
+            // Extract JSON from response
+            if (preg_match('/\{.*\}/s', $response_text, $matches)) {
+                $result = json_decode($matches[0], true);
+                
+                if (isset($result['hts_code']) && preg_match('/^\d{4}\.\d{2}\.\d{4}$/', $result['hts_code'])) {
+                    // Log successful classification
+                    HTS_Error_Handler::log_success(
+                        'Product classified successfully',
+                        array_merge($context, array(
+                            'hts_code' => $result['hts_code'],
+                            'confidence' => $result['confidence']
+                        ))
+                    );
+                    
+                    return $result;
+                }
             }
         }
+        
+        // If we get here, classification failed to parse properly
+        return HTS_Error_Handler::handle_error(
+            'classification_failed',
+            'Failed to parse valid HTS code from API response',
+            array_merge($context, array('response_text' => substr($response_text ?? '', 0, 200)))
+        );
+        
+    } catch (Exception $e) {
+        // Catch any unexpected PHP errors
+        return HTS_Error_Handler::handle_error(
+            'classification_failed',
+            'PHP Exception: ' . $e->getMessage(),
+            array_merge($context, array(
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine()
+            ))
+        );
+    } catch (Error $e) {
+        // Catch PHP 7+ errors
+        return HTS_Error_Handler::handle_error(
+            'classification_failed',
+            'PHP Error: ' . $e->getMessage(),
+            array_merge($context, array(
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine()
+            ))
+        );
     }
-    
-    return false;
 }
 
 // ===============================================
@@ -1089,38 +1660,94 @@ function hts_auto_classify_on_save($post_id, $post, $update) {
 
 add_action('hts_classify_product_cron', 'hts_run_scheduled_classification');
 function hts_run_scheduled_classification($product_id) {
-    $api_key = get_option('hts_anthropic_api_key');
-    if (empty($api_key)) {
-        return;
-    }
-    
-    // Check if we can classify (respects usage limits)
-    $hts_manager = new HTS_Manager();
-    $can_classify = $hts_manager->can_classify();
-    
-    if ($can_classify !== true) {
-        // Skip classification if limit reached
-        error_log('HTS Manager: Skipping auto-classification for product ' . $product_id . ' - usage limit reached');
-        return;
-    }
-    
-    $result = hts_classify_product($product_id, $api_key);
-    
-    if ($result && isset($result['hts_code'])) {
-        update_post_meta($product_id, '_hts_code', $result['hts_code']);
-        update_post_meta($product_id, '_hts_confidence', $result['confidence']);
-        update_post_meta($product_id, '_hts_updated', current_time('mysql'));
-        update_post_meta($product_id, '_country_of_origin', 'CA');
-        
-        // Increment usage counter for free version tracking
-        if (!$hts_manager->is_pro()) {
-            $hts_manager->increment_usage();
+    try {
+        $api_key = get_option('hts_anthropic_api_key');
+        if (empty($api_key)) {
+            HTS_Error_Handler::log_error(
+                'auto_classify_no_api_key',
+                'Skipping auto-classification - no API key configured',
+                array('product_id' => $product_id)
+            );
+            return;
         }
         
-        // Notify admin if low confidence
-        if ($result['confidence'] < 0.60) {
-            hts_notify_admin_low_confidence($product_id, $result);
+        // Check if we can classify (respects usage limits)
+        $hts_manager = new HTS_Manager();
+        $can_classify = $hts_manager->can_classify();
+        
+        if ($can_classify !== true) {
+            // Skip classification if limit reached
+            HTS_Error_Handler::log_error(
+                'auto_classify_limit_reached',
+                'Skipping auto-classification - usage limit reached',
+                array('product_id' => $product_id, 'limit_info' => $can_classify)
+            );
+            return;
         }
+        
+        // Attempt classification with comprehensive error handling
+        $result = hts_classify_product($product_id, $api_key);
+        
+        // Handle new error format
+        if (isset($result['type']) && $result['type'] !== 'success') {
+            // Store error information for admin review
+            update_post_meta($product_id, '_hts_classification_error', $result['message']);
+            update_post_meta($product_id, '_hts_error_time', current_time('mysql'));
+            
+            // Set a transient for admin notification
+            $error_products = get_transient('hts_auto_classify_errors') ?: array();
+            $error_products[$product_id] = array(
+                'product_name' => get_the_title($product_id),
+                'error' => $result['message'],
+                'time' => current_time('mysql')
+            );
+            set_transient('hts_auto_classify_errors', $error_products, DAY_IN_SECONDS);
+            
+            return;
+        }
+        
+        // Handle successful classification
+        if ($result && isset($result['hts_code'])) {
+            update_post_meta($product_id, '_hts_code', sanitize_text_field($result['hts_code']));
+            update_post_meta($product_id, '_hts_confidence', floatval($result['confidence']));
+            update_post_meta($product_id, '_hts_updated', current_time('mysql'));
+            update_post_meta($product_id, '_country_of_origin', 'CA');
+            
+            // Clear any previous error
+            delete_post_meta($product_id, '_hts_classification_error');
+            delete_post_meta($product_id, '_hts_error_time');
+            
+            // Increment usage counter for free version tracking
+            if (!$hts_manager->is_pro()) {
+                $hts_manager->increment_usage();
+            }
+            
+            // Notify admin if low confidence
+            if ($result['confidence'] < 0.60) {
+                hts_notify_admin_low_confidence($product_id, $result);
+            }
+            
+            HTS_Error_Handler::log_success(
+                'Auto-classification completed',
+                array(
+                    'product_id' => $product_id,
+                    'product_name' => get_the_title($product_id),
+                    'hts_code' => $result['hts_code'],
+                    'confidence' => $result['confidence']
+                )
+            );
+        }
+        
+    } catch (Exception $e) {
+        HTS_Error_Handler::log_error(
+            'auto_classify_exception',
+            'Exception during auto-classification: ' . $e->getMessage(),
+            array(
+                'product_id' => $product_id,
+                'exception_file' => $e->getFile(),
+                'exception_line' => $e->getLine()
+            )
+        );
     }
 }
 
