@@ -1,0 +1,31 @@
+HTS MANAGER - SHORT DESCRIPTIONS
+================================
+(WordPress.org 150 character limit)
+
+PRIMARY (147 characters):
+"AI-powered HTS code generation for WooCommerce. Essential for US tariff compliance by August 29, 2025 deadline. Free & Pro versions."
+
+ALTERNATIVES:
+
+Option A (141 characters):
+"Generate accurate HTS codes with AI. Meet August 2025 US tariff requirements. WooCommerce integration. Free version available."
+
+Option B (127 characters):
+"Automate HTS classification for WooCommerce products. AI-powered accuracy. Critical for August 29, 2025 tariff compliance."
+
+Option C (124 characters):
+"HTS code automation for WooCommerce. AI-powered classification. August 2025 tariff compliance ready. Try free version now!"
+
+Option D (134 characters):
+"AI-powered tariff classification for WooCommerce. Meet August 29, 2025 US compliance deadline. Free plugin with pro upgrade."
+
+Option E (139 characters):
+"Automated HTS code generation using AI. Essential for WooCommerce stores shipping internationally. August 2025 compliance ready."
+
+BACKUP OPTIONS (if primary gets rejected):
+
+Safe Version (143 characters):
+"Professional HTS code management for WooCommerce. AI-powered classification. Meet new US tariff requirements. Free and Pro versions."
+
+Generic Version (128 characters):
+"Complete HTS code solution for WooCommerce stores. AI-powered classification, compliance tracking, and professional support."

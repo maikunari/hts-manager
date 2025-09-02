@@ -1,0 +1,72 @@
+HTS MANAGER - FEATURE LISTS
+===========================
+
+FREE VERSION FEATURES (for WordPress.org listing):
+✅ 25 AI-generated HTS codes per month
+✅ One-click classification from product pages
+✅ Manual code editing and override capabilities
+✅ Usage tracking and compliance monitoring
+✅ Seamless WooCommerce integration
+✅ WordPress.org community support
+✅ Enterprise-level security
+✅ August 2025 compliance ready
+
+PRO VERSION FEATURES (for upgrade messaging):
+🚀 UNLIMITED monthly classifications
+⚡ Bulk classification tools for large catalogs
+📊 Advanced reporting and analytics dashboard
+🎯 Priority email support (faster response)
+🔄 Regular feature updates and enhancements
+💼 Multi-store licensing options
+💰 30-day money-back guarantee
+📈 Compliance tracking across all products
+
+CORE TECHNICAL FEATURES:
+• AI-powered classification using Anthropic Claude
+• Proper WordPress/WooCommerce hooks and filters
+• Comprehensive error handling and user feedback
+• Secure API communication with nonce validation
+• Data sanitization and output escaping throughout
+• Follows WordPress coding standards
+• Translation ready (i18n support)
+• Multisite compatible
+
+COMPLIANCE & SECURITY FEATURES:
+• August 29, 2025 US tariff regulation compliance
+• GDPR compliant data handling
+• No sensitive data transmission
+• Secure API key storage
+• Comprehensive audit logging
+• Professional error messaging
+• Data validation and sanitization
+• WordPress security best practices
+
+USER EXPERIENCE FEATURES:
+• Clean, intuitive admin interface
+• One-click code generation
+• Real-time usage tracking
+• Contextual help and documentation
+• Progressive upgrade messaging
+• Mobile-responsive admin panels
+• Accessibility compliant (WCAG)
+• Multi-language support ready
+
+INTEGRATION FEATURES:
+• Native WooCommerce product integration
+• Custom product meta field storage
+• REST API endpoint support
+• Action and filter hooks for developers
+• Import/export compatibility
+• Third-party shipping plugin support
+• Multi-currency store compatibility
+• Variable product support
+
+BUSINESS FEATURES:
+• Free tier with 25 classifications
+• Pro tier with unlimited usage
+• Usage analytics and reporting
+• Compliance deadline tracking
+• Bulk operations for large catalogs
+• Advanced classification options
+• Priority support channels
+• Regular feature updates

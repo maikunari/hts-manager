@@ -1,0 +1,652 @@
+/**
+ * HTS Manager Admin Styles
+ * Modern, responsive styling for the admin interface
+ */
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+.hts-container {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.hts-card {
+    background: #fff;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.hts-section {
+    margin-bottom: 30px;
+}
+
+.hts-section:last-child {
+    margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.hts-loading {
+    position: relative;
+    opacity: 0.7;
+}
+
+.hts-loading .spinner {
+    float: none;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+.hts-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Usage Counter & Progress
+   ========================================================================== */
+
+.hts-usage-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.hts-usage-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.hts-usage-text {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.hts-usage-remaining {
+    color: #16a085;
+    font-weight: 500;
+}
+
+.hts-usage-remaining.warning {
+    color: #f39c12;
+}
+
+.hts-usage-remaining.danger {
+    color: #e74c3c;
+}
+
+/* Progress Bar */
+.hts-progress-container {
+    width: 120px;
+    height: 8px;
+    background: #e1e5e9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.hts-progress-bar {
+    height: 100%;
+    background: #16a085;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    border-radius: 4px;
+}
+
+.hts-progress-bar.warning {
+    background: #f39c12;
+}
+
+.hts-progress-bar.danger {
+    background: #e74c3c;
+}
+
+/* ==========================================================================
+   Buttons & Interactive Elements
+   ========================================================================== */
+
+.hts-classify-button,
+.hts-test-api-button,
+.hts-save-code-button {
+    background: #3498db !important;
+    border-color: #2980b9 !important;
+    color: white !important;
+    border-radius: 6px;
+    padding: 8px 16px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.hts-classify-button:hover,
+.hts-test-api-button:hover,
+.hts-save-code-button:hover {
+    background: #2980b9 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+}
+
+.hts-classify-button:active,
+.hts-test-api-button:active,
+.hts-save-code-button:active {
+    transform: translateY(0);
+}
+
+.hts-bulk-classify-button {
+    background: #9b59b6 !important;
+    border-color: #8e44ad !important;
+    color: white !important;
+}
+
+.hts-bulk-classify-button:hover {
+    background: #8e44ad !important;
+    box-shadow: 0 4px 8px rgba(155, 89, 182, 0.3);
+}
+
+/* Pro badges and indicators */
+.hts-pro-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 8px;
+}
+
+/* ==========================================================================
+   Form Controls
+   ========================================================================== */
+
+.hts-form-group {
+    margin-bottom: 20px;
+}
+
+.hts-form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #2c3e50;
+}
+
+.hts-api-key-input,
+.hts-manual-code-input,
+.hts-description-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px 12px;
+    border: 2px solid #e1e5e9;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.hts-api-key-input:focus,
+.hts-manual-code-input:focus,
+.hts-description-input:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* Validation states */
+.hts-api-key-input.valid,
+.hts-manual-code-input.valid {
+    border-color: #27ae60;
+}
+
+.hts-api-key-input.invalid,
+.hts-manual-code-input.invalid {
+    border-color: #e74c3c;
+}
+
+.hts-api-key-input.api-valid {
+    border-color: #27ae60;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="%2327ae60"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+    padding-right: 40px;
+}
+
+.hts-api-key-input.api-invalid {
+    border-color: #e74c3c;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="%23e74c3c"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px;
+    padding-right: 40px;
+}
+
+/* Validation feedback */
+.validation-feedback {
+    margin-top: 6px;
+    font-size: 12px;
+    padding: 4px 0;
+}
+
+.validation-feedback.success {
+    color: #27ae60;
+}
+
+.validation-feedback.error {
+    color: #e74c3c;
+}
+
+/* ==========================================================================
+   Results Display
+   ========================================================================== */
+
+.hts-result-container {
+    margin-top: 15px;
+}
+
+.hts-result-success {
+    background: #d5edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 6px;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+.hts-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: #155724;
+}
+
+.hts-result-header .confidence {
+    font-size: 12px;
+    background: rgba(21, 87, 36, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: normal;
+}
+
+.hts-expand-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.hts-expand-toggle:hover {
+    background: rgba(21, 87, 36, 0.1);
+}
+
+.hts-expand-toggle .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #155724;
+}
+
+.hts-result-details {
+    margin-top: 12px;
+    display: none;
+}
+
+.hts-expanded .hts-result-details {
+    display: block;
+}
+
+.hts-result-details p {
+    margin-bottom: 10px;
+    color: #155724;
+    line-height: 1.5;
+}
+
+.hts-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.hts-actions .button {
+    font-size: 12px;
+    padding: 6px 12px;
+    height: auto;
+    line-height: 1.4;
+}
+
+.hts-edit-inline {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    color: #495057;
+}
+
+.hts-regenerate {
+    background: #17a2b8;
+    border-color: #138496;
+    color: white;
+}
+
+/* ==========================================================================
+   Messages & Notifications
+   ========================================================================== */
+
+.hts-message {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-top: 10px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hts-message.hts-success {
+    background: #d5edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.hts-message.hts-error {
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.hts-message::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    background-size: contain;
+    flex-shrink: 0;
+}
+
+.hts-message.hts-success::before {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="%23155724"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>');
+}
+
+.hts-message.hts-error::before {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="%23721c24"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>');
+}
+
+/* ==========================================================================
+   Upgrade Prompts
+   ========================================================================== */
+
+.hts-upgrade-prompt {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.hts-upgrade-prompt p {
+    margin-bottom: 15px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.hts-upgrade-prompt .button-primary {
+    background: white;
+    color: #667eea;
+    border-color: white;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+.hts-upgrade-prompt .button-primary:hover {
+    background: #f8f9fa;
+    color: #5a67d8;
+}
+
+.hts-upgrade-prompt .dismiss-upgrade {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: white;
+}
+
+.hts-upgrade-prompt .dismiss-upgrade:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   Bulk Operations
+   ========================================================================== */
+
+.hts-bulk-progress {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.hts-bulk-progress .progress-container {
+    width: 100%;
+    max-width: 400px;
+    height: 12px;
+    background: #e9ecef;
+    border-radius: 6px;
+    margin: 0 auto 15px;
+    overflow: hidden;
+}
+
+.hts-bulk-progress .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    transition: width 0.3s ease;
+    border-radius: 6px;
+}
+
+.hts-bulk-progress .progress-text {
+    font-size: 14px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   Product Data Tab
+   ========================================================================== */
+
+#woocommerce-product-data .inside .hts-manager-fields {
+    padding: 20px;
+}
+
+.hts-manager-fields .form-field {
+    margin-bottom: 20px;
+}
+
+.hts-manager-fields .form-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.hts-manager-fields .current-code-display {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.hts-manager-fields .current-code {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.hts-manager-fields .current-description {
+    color: #6c757d;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.hts-manager-fields .no-code {
+    color: #adb5bd;
+    font-style: italic;
+}
+
+.hts-manager-fields .button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .hts-usage-stats {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .hts-progress-container {
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    .hts-result-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .hts-actions {
+        flex-direction: column;
+    }
+    
+    .hts-manager-fields .button-group {
+        flex-direction: column;
+    }
+    
+    .hts-upgrade-prompt .button-primary,
+    .hts-upgrade-prompt .dismiss-upgrade {
+        display: block;
+        width: 100%;
+        margin: 5px 0;
+    }
+}
+
+/* ==========================================================================
+   Accessibility & Focus States
+   ========================================================================== */
+
+.hts-classify-button:focus,
+.hts-test-api-button:focus,
+.hts-save-code-button:focus,
+.hts-bulk-classify-button:focus {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+
+.hts-expand-toggle:focus {
+    outline: 2px solid #155724;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .hts-card {
+        border-color: #000;
+    }
+    
+    .hts-message.hts-success {
+        border-color: #000;
+    }
+    
+    .hts-message.hts-error {
+        border-color: #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+/* ==========================================================================
+   Dark Mode Support (for future WordPress admin themes)
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+    .hts-card {
+        background: #1e1e1e;
+        border-color: #3c3c3c;
+        color: #fff;
+    }
+    
+    .hts-usage-counter {
+        background: #2d2d2d;
+        border-color: #3c3c3c;
+        color: #fff;
+    }
+    
+    .hts-api-key-input,
+    .hts-manual-code-input,
+    .hts-description-input {
+        background: #2d2d2d;
+        border-color: #3c3c3c;
+        color: #fff;
+    }
+    
+    .hts-message.hts-success {
+        background: #1a4a2e;
+        border-color: #2d5a41;
+    }
+    
+    .hts-message.hts-error {
+        background: #4a1a1a;
+        border-color: #5a2d2d;
+    }
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+.hts-hidden {
+    display: none !important;
+}
+
+.hts-text-center {
+    text-align: center;
+}
+
+.hts-text-small {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.hts-mt-10 {
+    margin-top: 10px;
+}
+
+.hts-mb-10 {
+    margin-bottom: 10px;
+}
+
+.hts-p-10 {
+    padding: 10px;
+}

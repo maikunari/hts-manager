@@ -512,6 +512,14 @@ class HTS_Manager {
         
         // PART 4: ADMIN
         add_action('admin_menu', array($this, 'admin_menu'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+        
+        // AJAX HANDLERS
+        add_action('wp_ajax_hts_classify_product', array($this, 'ajax_classify_product'));
+        add_action('wp_ajax_hts_test_api_key', array($this, 'ajax_test_api_key'));
+        add_action('wp_ajax_hts_get_usage_stats', array($this, 'ajax_get_usage_stats'));
+        add_action('wp_ajax_hts_bulk_classify', array($this, 'ajax_bulk_classify'));
+        add_action('wp_ajax_hts_save_manual_code', array($this, 'ajax_save_manual_code'));
         
         // PART 5: BULK ACTIONS
         add_filter('bulk_actions-edit-product', array($this, 'add_bulk_classify'));
@@ -529,6 +537,369 @@ class HTS_Manager {
         add_action('admin_notices', array($this, 'usage_limit_notices'));
         add_action('admin_notices', array($this, 'auto_classification_error_notices'));
         
+    }
+    
+    // ===============================================
+    // ADMIN SCRIPTS AND STYLES
+    // ===============================================
+    
+    /**
+     * Enqueue admin scripts and styles
+     */
+    public function enqueue_admin_scripts($hook) {
+        global $post;
+        
+        // Only load on product edit pages and HTS manager pages
+        if (!in_array($hook, ['post.php', 'post-new.php', 'woocommerce_page_hts-manager'])) {
+            return;
+        }
+        
+        // Only load on product pages or HTS manager pages
+        if ($hook === 'post.php' || $hook === 'post-new.php') {
+            if (!$post || $post->post_type !== 'product') {
+                return;
+            }
+        }
+        
+        // Enqueue scripts
+        wp_enqueue_script(
+            'hts-manager-admin',
+            HTS_MANAGER_PLUGIN_URL . 'assets/js/hts-admin.js',
+            array('jquery', 'wp-util'),
+            HTS_MANAGER_VERSION,
+            true
+        );
+        
+        // Enqueue styles
+        wp_enqueue_style(
+            'hts-manager-admin',
+            HTS_MANAGER_PLUGIN_URL . 'assets/css/hts-admin.css',
+            array(),
+            HTS_MANAGER_VERSION
+        );
+        
+        // Localize script with AJAX data
+        wp_localize_script('hts-manager-admin', 'htsManager', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('hts_manager_nonce'),
+            'strings' => array(
+                'classifying' => __('Classifying...', 'hts-manager'),
+                'classified' => __('Product classified successfully!', 'hts-manager'),
+                'error' => __('Error occurred during classification', 'hts-manager'),
+                'testing' => __('Testing API connection...', 'hts-manager'),
+                'connected' => __('API connection successful!', 'hts-manager'),
+                'saving' => __('Saving...', 'hts-manager'),
+                'saved' => __('Code saved successfully!', 'hts-manager'),
+                'confirm_bulk' => __('Are you sure you want to classify %d products?', 'hts-manager'),
+                'bulk_processing' => __('Processing %d of %d products...', 'hts-manager'),
+                'bulk_complete' => __('Bulk classification complete!', 'hts-manager')
+            ),
+            'isPro' => $this->is_pro(),
+            'usageStats' => $this->get_usage_stats()
+        ));
+    }
+    
+    // ===============================================
+    // AJAX HANDLERS
+    // ===============================================
+    
+    /**
+     * AJAX handler for product classification
+     */
+    public function ajax_classify_product() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'hts_manager_nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+        
+        // Check capabilities
+        if (!current_user_can('edit_products')) {
+            wp_send_json_error(array('message' => 'Insufficient permissions'));
+            return;
+        }
+        
+        $product_id = intval($_POST['product_id']);
+        
+        if (!$product_id) {
+            wp_send_json_error(array('message' => 'Invalid product ID'));
+            return;
+        }
+        
+        try {
+            // Check if user can classify
+            $can_classify = $this->can_classify();
+            if (!is_bool($can_classify)) {
+                wp_send_json_error(array(
+                    'message' => $can_classify['message'],
+                    'upgrade_required' => $can_classify['upgrade_required'],
+                    'usage_stats' => $this->get_usage_stats()
+                ));
+                return;
+            }
+            
+            // Get product
+            $product = wc_get_product($product_id);
+            if (!$product) {
+                wp_send_json_error(array('message' => 'Product not found'));
+                return;
+            }
+            
+            // Generate classification
+            $result = $this->classify_product($product);
+            
+            if (is_wp_error($result)) {
+                wp_send_json_error(array(
+                    'message' => $result->get_error_message(),
+                    'usage_stats' => $this->get_usage_stats()
+                ));
+                return;
+            }
+            
+            // Update usage count
+            $this->increment_usage();
+            
+            // Return success with updated stats
+            wp_send_json_success(array(
+                'hts_code' => $result['hts_code'],
+                'confidence' => $result['confidence'],
+                'explanation' => $result['explanation'],
+                'usage_stats' => $this->get_usage_stats(),
+                'message' => 'Product classified successfully!'
+            ));
+            
+        } catch (Exception $e) {
+            wp_send_json_error(array(
+                'message' => 'Classification error: ' . $e->getMessage(),
+                'usage_stats' => $this->get_usage_stats()
+            ));
+        }
+    }
+    
+    /**
+     * AJAX handler for API key testing
+     */
+    public function ajax_test_api_key() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'hts_manager_nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+        
+        // Check capabilities
+        if (!current_user_can('manage_woocommerce')) {
+            wp_send_json_error(array('message' => 'Insufficient permissions'));
+            return;
+        }
+        
+        $api_key = sanitize_text_field($_POST['api_key']);
+        
+        if (empty($api_key)) {
+            wp_send_json_error(array('message' => 'API key is required'));
+            return;
+        }
+        
+        try {
+            // Test API connection
+            $test_result = $this->test_api_connection($api_key);
+            
+            if ($test_result) {
+                wp_send_json_success(array(
+                    'message' => 'API connection successful!',
+                    'connected' => true
+                ));
+            } else {
+                wp_send_json_error(array(
+                    'message' => 'API connection failed. Please check your key.',
+                    'connected' => false
+                ));
+            }
+            
+        } catch (Exception $e) {
+            wp_send_json_error(array(
+                'message' => 'Connection error: ' . $e->getMessage(),
+                'connected' => false
+            ));
+        }
+    }
+    
+    /**
+     * AJAX handler for getting usage statistics
+     */
+    public function ajax_get_usage_stats() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'hts_manager_nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+        
+        wp_send_json_success($this->get_usage_stats());
+    }
+    
+    /**
+     * AJAX handler for bulk classification
+     */
+    public function ajax_bulk_classify() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'hts_manager_nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+        
+        // Check capabilities
+        if (!current_user_can('edit_products')) {
+            wp_send_json_error(array('message' => 'Insufficient permissions'));
+            return;
+        }
+        
+        // Check if pro version required for bulk
+        if (!$this->can_use_bulk_classify()) {
+            wp_send_json_error(array(
+                'message' => 'Bulk classification requires Pro version',
+                'upgrade_required' => true
+            ));
+            return;
+        }
+        
+        $product_ids = array_map('intval', $_POST['product_ids']);
+        $processed = 0;
+        $success_count = 0;
+        $errors = array();
+        
+        foreach ($product_ids as $product_id) {
+            $processed++;
+            
+            try {
+                // Get product
+                $product = wc_get_product($product_id);
+                if (!$product) {
+                    $errors[] = "Product {$product_id} not found";
+                    continue;
+                }
+                
+                // Check if already has code (skip if it does)
+                $existing_code = get_post_meta($product_id, '_hts_code', true);
+                if (!empty($existing_code)) {
+                    continue; // Skip products that already have codes
+                }
+                
+                // Generate classification
+                $result = $this->classify_product($product);
+                
+                if (!is_wp_error($result)) {
+                    $this->increment_usage();
+                    $success_count++;
+                }
+                
+                // Send progress update
+                wp_send_json_success(array(
+                    'progress' => true,
+                    'processed' => $processed,
+                    'total' => count($product_ids),
+                    'success_count' => $success_count,
+                    'product_name' => $product->get_name(),
+                    'usage_stats' => $this->get_usage_stats()
+                ));
+                
+            } catch (Exception $e) {
+                $errors[] = "Product {$product_id}: " . $e->getMessage();
+            }
+            
+            // Prevent timeout on large batches
+            if ($processed % 10 === 0) {
+                sleep(1);
+            }
+        }
+        
+        // Send final result
+        wp_send_json_success(array(
+            'complete' => true,
+            'processed' => $processed,
+            'success_count' => $success_count,
+            'errors' => $errors,
+            'usage_stats' => $this->get_usage_stats(),
+            'message' => sprintf('Classified %d of %d products successfully', $success_count, count($product_ids))
+        ));
+    }
+    
+    /**
+     * AJAX handler for saving manual HTS code
+     */
+    public function ajax_save_manual_code() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'hts_manager_nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+        
+        // Check capabilities
+        if (!current_user_can('edit_products')) {
+            wp_send_json_error(array('message' => 'Insufficient permissions'));
+            return;
+        }
+        
+        $product_id = intval($_POST['product_id']);
+        $hts_code = sanitize_text_field($_POST['hts_code']);
+        $description = sanitize_textarea_field($_POST['description']);
+        
+        if (!$product_id) {
+            wp_send_json_error(array('message' => 'Invalid product ID'));
+            return;
+        }
+        
+        try {
+            // Validate HTS code format (basic validation)
+            if (!empty($hts_code) && !preg_match('/^\d{4}\.\d{2}\.\d{2}(\.\d{2})?$/', $hts_code)) {
+                wp_send_json_error(array('message' => 'Invalid HTS code format. Use format: 0000.00.00 or 0000.00.00.00'));
+                return;
+            }
+            
+            // Save the data
+            update_post_meta($product_id, '_hts_code', $hts_code);
+            update_post_meta($product_id, '_hts_description', $description);
+            update_post_meta($product_id, '_hts_manually_set', 'yes');
+            update_post_meta($product_id, '_hts_updated_date', current_time('Y-m-d H:i:s'));
+            
+            wp_send_json_success(array(
+                'message' => 'HTS code saved successfully!',
+                'hts_code' => $hts_code,
+                'description' => $description
+            ));
+            
+        } catch (Exception $e) {
+            wp_send_json_error(array(
+                'message' => 'Save error: ' . $e->getMessage()
+            ));
+        }
+    }
+    
+    /**
+     * Test API connection
+     */
+    private function test_api_connection($api_key) {
+        // Simple test request to validate API key
+        $response = wp_remote_post('https://api.anthropic.com/v1/messages', array(
+            'headers' => array(
+                'Content-Type' => 'application/json',
+                'x-api-key' => $api_key,
+                'anthropic-version' => '2023-06-01'
+            ),
+            'body' => json_encode(array(
+                'model' => 'claude-3-haiku-20240307',
+                'max_tokens' => 10,
+                'messages' => array(
+                    array('role' => 'user', 'content' => 'Test')
+                )
+            )),
+            'timeout' => 30
+        ));
+        
+        if (is_wp_error($response)) {
+            return false;
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        return $response_code === 200;
     }
     
     // ===============================================
@@ -566,55 +937,103 @@ class HTS_Manager {
         }
         ?>
         <div id="hts_codes_product_data" class="panel woocommerce_options_panel">
-            
-            <?php wp_nonce_field('hts_product_nonce_action', 'hts_product_nonce'); ?>
-            
-            <div class="options_group">
-                <?php
-                woocommerce_wp_text_input(array(
-                    'id'          => '_hts_code',
-                    'label'       => __('HTS Code', 'hts-manager'),
-                    'placeholder' => '0000.00.0000',
-                    'desc_tip'    => true,
-                    'description' => __('Enter the 10-digit Harmonized Tariff Schedule code for this product.', 'hts-manager'),
-                    'value'       => $hts_code,
-                ));
-                ?>
+            <div class="hts-manager-fields">
                 
-                <p class="form-field">
-                    <label><?php _e('Generate HTS Code', 'hts-manager'); ?></label>
-                    <button type="button" class="button button-primary" id="hts_generate_code" <?php echo !empty($hts_code) ? 'disabled' : ''; ?>>
-                        <span class="dashicons dashicons-update" style="vertical-align: middle;"></span>
-                        <?php _e('Auto-Generate with AI', 'hts-manager'); ?>
-                    </button>
-                    <?php if (!empty($hts_code)): ?>
-                        <a href="#" id="hts_regenerate_link" style="margin-left: 10px; text-decoration: none;">
-                            <?php _e('Regenerate', 'hts-manager'); ?>
-                        </a>
-                    <?php endif; ?>
-                    <span id="hts_generate_spinner" class="spinner" style="display: none; float: none; margin-left: 10px;"></span>
-                    <span id="hts_generate_message" style="display: none; margin-left: 10px;"></span>
-                </p>
+                <?php wp_nonce_field('hts_product_nonce_action', 'hts_product_nonce'); ?>
                 
-                <?php if ($hts_confidence): ?>
-                <p class="form-field">
-                    <label><?php _e('Confidence', 'hts-manager'); ?></label>
-                    <span style="margin-left: 10px;">
-                        <?php 
-                        $confidence_percent = round($hts_confidence * 100);
-                        $confidence_color = $confidence_percent >= 85 ? 'green' : ($confidence_percent >= 60 ? 'orange' : 'red');
-                        ?>
-                        <span style="color: <?php echo $confidence_color; ?>; font-weight: bold;">
-                            <?php echo $confidence_percent; ?>%
-                        </span>
-                        <?php if ($hts_updated): ?>
-                            <span style="color: #666; margin-left: 10px;">
-                                (Updated: <?php echo date('Y-m-d H:i', strtotime($hts_updated)); ?>)
+                <!-- Usage Counter Display -->
+                <div class="hts-form-group">
+                    <div class="hts-usage-counter">
+                        <div class="hts-usage-stats">
+                            <span class="hts-usage-text">
+                                Classifications: <span class="used"><?php echo $this->get_usage_count(); ?></span>
+                                / <span class="limit"><?php echo $this->is_pro() ? '∞' : $this->get_classification_limit(); ?></span>
                             </span>
-                        <?php endif; ?>
-                    </span>
-                </p>
+                            <?php if (!$this->is_pro()): ?>
+                                <div class="hts-progress-container">
+                                    <div class="hts-progress-bar" style="width: <?php echo min(100, round(($this->get_usage_count() / $this->get_classification_limit()) * 100)); ?>%"></div>
+                                </div>
+                            <?php endif; ?>
+                            <?php if (!$this->is_pro()): ?>
+                                <span class="hts-pro-badge">Upgrade to Pro for unlimited</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Current HTS Code Display -->
+                <?php if (!empty($hts_code)): ?>
+                <div class="current-code-display">
+                    <div class="current-code"><?php echo esc_html($hts_code); ?></div>
+                    <div class="current-description">
+                        <?php 
+                        $description = get_post_meta($post->ID, '_hts_description', true);
+                        echo esc_html($description ? $description : 'No description available');
+                        ?>
+                    </div>
+                    <?php if ($hts_confidence): ?>
+                        <div class="confidence-info">
+                            <?php 
+                            $confidence_percent = round($hts_confidence * 100);
+                            $confidence_class = $confidence_percent >= 85 ? 'high' : ($confidence_percent >= 60 ? 'medium' : 'low');
+                            ?>
+                            <span class="confidence confidence-<?php echo $confidence_class; ?>">
+                                Confidence: <?php echo $confidence_percent; ?>%
+                            </span>
+                            <?php if ($hts_updated): ?>
+                                <span class="updated-date">
+                                    Updated: <?php echo date('M j, Y H:i', strtotime($hts_updated)); ?>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php else: ?>
+                <div class="current-code-display">
+                    <div class="no-code">No HTS code assigned</div>
+                    <div class="current-description">Use AI classification or enter manually below</div>
+                </div>
                 <?php endif; ?>
+                
+                <!-- AI Classification Section -->
+                <div class="hts-form-group">
+                    <label><?php _e('AI Classification', 'hts-manager'); ?></label>
+                    <div class="button-group">
+                        <button type="button" class="button button-primary hts-classify-button" data-product-id="<?php echo $post->ID; ?>">
+                            <span class="dashicons dashicons-update"></span>
+                            <?php _e('Generate with AI', 'hts-manager'); ?>
+                        </button>
+                        <?php if (!empty($hts_code)): ?>
+                            <button type="button" class="button hts-regenerate-button" data-product-id="<?php echo $post->ID; ?>">
+                                <span class="dashicons dashicons-controls-repeat"></span>
+                                <?php _e('Regenerate', 'hts-manager'); ?>
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                    <div class="hts-result-container hts-hidden"></div>
+                </div>
+                
+                <!-- Manual Entry Section -->
+                <div class="hts-form-group">
+                    <label for="hts_manual_code"><?php _e('Manual Entry', 'hts-manager'); ?></label>
+                    <input type="text" 
+                           id="hts_manual_code" 
+                           name="_hts_code" 
+                           class="hts-manual-code-input" 
+                           value="<?php echo esc_attr($hts_code); ?>" 
+                           placeholder="0000.00.00.00">
+                    <textarea id="hts_manual_description" 
+                              name="_hts_description" 
+                              class="hts-description-input" 
+                              placeholder="Description of the classification"
+                              rows="3"><?php echo esc_textarea(get_post_meta($post->ID, '_hts_description', true)); ?></textarea>
+                    <div class="button-group">
+                        <button type="button" class="button hts-save-code-button" data-product-id="<?php echo $post->ID; ?>">
+                            <span class="dashicons dashicons-saved"></span>
+                            <?php _e('Save Manual Code', 'hts-manager'); ?>
+                        </button>
+                    </div>
+                </div>
                 
                 <?php
                 woocommerce_wp_select(array(
@@ -1876,14 +2295,249 @@ function hts_manager_settings_page() {
         </div>
         <?php endif; ?>
         
-        <form method="post">
-            <?php wp_nonce_field('hts_settings', 'hts_nonce'); ?>
+        <div class="hts-container">
+            <!-- API Configuration Card -->
+            <div class="hts-card">
+                <h2>API Configuration</h2>
+                <form method="post">
+                    <?php wp_nonce_field('hts_settings', 'hts_nonce'); ?>
+                    
+                    <div class="hts-form-group">
+                        <label for="api_key">Anthropic API Key</label>
+                        <input type="password" 
+                               id="api_key" 
+                               name="api_key" 
+                               class="hts-api-key-input" 
+                               value="<?php echo esc_attr($api_key); ?>" 
+                               placeholder="sk-ant-api03-..."
+                               style="width: 100%; max-width: 500px;">
+                        <div class="button-group" style="margin-top: 10px;">
+                            <button type="button" class="button hts-test-api-button">
+                                <span class="dashicons dashicons-cloud"></span>
+                                Test Connection
+                            </button>
+                            <button type="button" class="button" id="show-api-key">
+                                <span class="dashicons dashicons-visibility"></span>
+                                Show/Hide Key
+                            </button>
+                        </div>
+                        <p class="description">
+                            Get your API key from <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a>. 
+                            The free tier includes generous usage limits.
+                        </p>
+                    </div>
+                    
+                    <div class="hts-form-group">
+                        <label>
+                            <input type="checkbox" name="enabled" value="1" <?php checked($enabled, '1'); ?>>
+                            Enable Auto-Classification
+                        </label>
+                        <p class="description">Automatically generate HTS codes when products are published or updated.</p>
+                    </div>
+                    
+                    <div class="hts-form-group">
+                        <label for="confidence_threshold">Confidence Threshold</label>
+                        <input type="range" 
+                               id="confidence_threshold" 
+                               name="confidence_threshold" 
+                               min="0.3" 
+                               max="0.95" 
+                               step="0.05" 
+                               value="<?php echo esc_attr($threshold); ?>"
+                               style="width: 300px;">
+                        <span id="threshold_display"><?php echo round($threshold * 100); ?>%</span>
+                        <p class="description">Minimum confidence level required for auto-classification to proceed.</p>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button type="submit" name="submit" class="button button-primary">
+                            <span class="dashicons dashicons-saved"></span>
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
             
-            <h2>Auto-Classification Settings</h2>
-            <table class="form-table">
-                <tr>
-                    <th scope="row">Enable Auto-Classification</th>
-                    <td>
+            <!-- Usage Statistics Card -->
+            <div class="hts-card">
+                <h2>Usage Statistics</h2>
+                <div class="hts-usage-counter">
+                    <div class="hts-usage-stats">
+                        <span class="hts-usage-text">
+                            Classifications: <span class="used"><?php echo $stats['used']; ?></span>
+                            / <span class="limit"><?php echo $hts_manager->is_pro() ? '∞' : $stats['limit']; ?></span>
+                        </span>
+                        <?php if (!$hts_manager->is_pro()): ?>
+                            <div class="hts-progress-container">
+                                <div class="hts-progress-bar <?php echo $stats['percentage_used'] >= 80 ? 'danger' : ($stats['percentage_used'] >= 60 ? 'warning' : ''); ?>" 
+                                     style="width: <?php echo min(100, $stats['percentage_used']); ?>%"></div>
+                            </div>
+                            <span class="hts-usage-remaining <?php echo $stats['remaining'] <= 5 ? 'danger' : ($stats['remaining'] <= 10 ? 'warning' : ''); ?>">
+                                <?php echo $stats['remaining']; ?> remaining
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <?php if (!$hts_manager->is_pro() && $stats['remaining'] <= 5): ?>
+                    <div class="hts-upgrade-prompt">
+                        <p>You're running low on classifications! Upgrade to Pro for unlimited usage.</p>
+                        <a href="https://sonicpixel.ca/hts-manager-pro/" class="button button-primary" target="_blank">
+                            Upgrade to Pro
+                        </a>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (current_user_can('manage_options')): ?>
+                <form method="post" style="margin-top: 20px;">
+                    <?php wp_nonce_field('hts_reset_usage', 'hts_reset_nonce'); ?>
+                    <button type="submit" name="reset_usage" class="button" 
+                            onclick="return confirm('Are you sure you want to reset the usage counter?')">
+                        <span class="dashicons dashicons-controls-repeat"></span>
+                        Reset Usage Counter
+                    </button>
+                </form>
+                <?php endif; ?>
+            </div>
+            
+            <!-- Bulk Classification Card -->
+            <?php if ($hts_manager->can_use_bulk_classify()): ?>
+            <div class="hts-card">
+                <h2>Bulk Classification</h2>
+                <p>Classify multiple products without HTS codes at once.</p>
+                
+                <div class="hts-form-group">
+                    <label>Products to Classify</label>
+                    <select id="bulk-product-selector" multiple style="width: 100%; height: 150px;">
+                        <?php
+                        $products_without_codes = get_posts(array(
+                            'post_type' => 'product',
+                            'posts_per_page' => 100,
+                            'meta_query' => array(
+                                'relation' => 'OR',
+                                array(
+                                    'key' => '_hts_code',
+                                    'compare' => 'NOT EXISTS'
+                                ),
+                                array(
+                                    'key' => '_hts_code',
+                                    'value' => '',
+                                    'compare' => '='
+                                )
+                            )
+                        ));
+                        
+                        foreach ($products_without_codes as $product) {
+                            echo '<option value="' . esc_attr($product->ID) . '">' . esc_html($product->post_title) . '</option>';
+                        }
+                        ?>
+                    </select>
+                    <p class="description">Hold Ctrl/Cmd to select multiple products. Only products without HTS codes are shown.</p>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" class="button button-primary hts-bulk-classify-button">
+                        <span class="dashicons dashicons-update"></span>
+                        Start Bulk Classification
+                    </button>
+                    <button type="button" class="button" id="select-all-products">Select All</button>
+                    <button type="button" class="button" id="clear-selection">Clear Selection</button>
+                </div>
+                
+                <div class="hts-bulk-progress hts-hidden" id="bulk-progress-container">
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text">Preparing...</div>
+                </div>
+            </div>
+            <?php else: ?>
+            <div class="hts-card">
+                <h2>Bulk Classification</h2>
+                <div class="hts-upgrade-prompt">
+                    <p>Bulk classification is a Pro feature. Upgrade to classify multiple products at once.</p>
+                    <a href="https://sonicpixel.ca/hts-manager-pro/" class="button button-primary" target="_blank">
+                        Upgrade to Pro
+                    </a>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+        
+        <script>
+            jQuery(document).ready(function($) {
+                // Show/Hide API key
+                $('#show-api-key').on('click', function() {
+                    const input = $('#api_key');
+                    const type = input.attr('type') === 'password' ? 'text' : 'password';
+                    input.attr('type', type);
+                });
+                
+                // Confidence threshold slider
+                $('#confidence_threshold').on('input', function() {
+                    const value = Math.round($(this).val() * 100);
+                    $('#threshold_display').text(value + '%');
+                });
+                
+                // Bulk product selection
+                $('#select-all-products').on('click', function() {
+                    $('#bulk-product-selector option').prop('selected', true);
+                });
+                
+                $('#clear-selection').on('click', function() {
+                    $('#bulk-product-selector option').prop('selected', false);
+                });
+                
+                // Override bulk classify button handler
+                $('.hts-bulk-classify-button').off('click').on('click', function() {
+                    const selectedProducts = $('#bulk-product-selector').val();
+                    if (!selectedProducts || selectedProducts.length === 0) {
+                        alert('Please select at least one product to classify.');
+                        return;
+                    }
+                    
+                    if (!confirm('Are you sure you want to classify ' + selectedProducts.length + ' products?')) {
+                        return;
+                    }
+                    
+                    // Use the existing bulk classify functionality
+                    const progressContainer = $('#bulk-progress-container').removeClass('hts-hidden');
+                    
+                    $.ajax({
+                        url: htsManager.ajaxUrl,
+                        type: 'POST',
+                        data: {
+                            action: 'hts_bulk_classify',
+                            nonce: htsManager.nonce,
+                            product_ids: selectedProducts
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                if (response.data.complete) {
+                                    progressContainer.find('.progress-text').text('Complete! Classified ' + response.data.success_count + ' products.');
+                                    progressContainer.find('.progress-bar').css('width', '100%');
+                                    
+                                    // Refresh usage stats
+                                    if (window.HTSManager) {
+                                        window.HTSManager.refreshUsageStats();
+                                    }
+                                    
+                                    setTimeout(function() {
+                                        location.reload();
+                                    }, 2000);
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+        </script>
+        
+        <h2>Auto-Classification Settings</h2>
+        <table class="form-table">
+            <tr>
+                <th scope="row">Enable Auto-Classification</th>
+                <td>
                         <label>
                             <input type="checkbox" name="enabled" value="1" <?php checked($enabled, '1'); ?>>
                             Automatically classify new products when published

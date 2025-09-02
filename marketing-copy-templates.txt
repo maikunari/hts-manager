@@ -1,0 +1,236 @@
+HTS MANAGER MARKETING COPY TEMPLATES
+===================================
+
+SHORT DESCRIPTIONS (150 character limit for WordPress.org)
+----------------------------------------------------------
+
+PRIMARY (147 characters):
+"AI-powered HTS code generation for WooCommerce. Essential for US tariff compliance by August 29, 2025 deadline. Free & Pro versions."
+
+ALTERNATIVE OPTIONS:
+1. "Generate accurate HTS codes with AI. Meet August 2025 US tariff requirements. WooCommerce integration. Free version available." (141 chars)
+2. "Automate HTS classification for WooCommerce products. AI-powered accuracy. Critical for August 29, 2025 tariff compliance." (127 chars)
+3. "HTS code automation for WooCommerce. AI-powered classification. August 2025 tariff compliance ready. Try free version now!" (124 chars)
+
+TAGLINES & HEADLINES
+-------------------
+
+Primary Headline:
+"Meet the August 29, 2025 Tariff Deadline with AI-Powered HTS Classification"
+
+Alternative Headlines:
+- "Don't Risk Penalties - Automate Your HTS Codes Today"
+- "AI-Powered Tariff Compliance for WooCommerce Stores"
+- "Generate Accurate HTS Codes in Seconds, Not Hours"
+- "Essential Plugin for International WooCommerce Sellers"
+
+Urgency-Focused Headlines:
+- "⚠️ DEADLINE ALERT: August 29, 2025 US Tariff Compliance Required"
+- "🚨 NEW REGULATIONS: Accurate HTS Codes Now Mandatory"
+- "⏰ TIME SENSITIVE: Ensure Your Store's Tariff Compliance"
+
+FEATURE LISTS
+------------
+
+FREE VERSION FEATURES:
+✅ 25 AI-generated HTS codes per month
+✅ One-click classification from product pages
+✅ Manual code editing and override capabilities
+✅ Usage tracking and compliance monitoring
+✅ Seamless WooCommerce integration
+✅ WordPress.org community support
+✅ Enterprise-level security
+✅ August 2025 compliance ready
+
+PRO VERSION FEATURES:
+🚀 UNLIMITED monthly classifications
+⚡ Bulk classification tools for large catalogs
+📊 Advanced reporting and analytics dashboard
+🎯 Priority email support (faster response)
+🔄 Regular feature updates and enhancements
+💼 Multi-store licensing options
+💰 30-day money-back guarantee
+📈 Compliance tracking across all products
+
+BENEFIT-FOCUSED COPY
+-------------------
+
+Pain Points We Solve:
+❌ Hours spent manually researching HTS codes
+❌ Risk of costly penalties from incorrect codes
+❌ Shipments delayed or seized at customs
+❌ Compliance uncertainty with new regulations
+❌ Manual processes that don't scale
+
+Solutions We Provide:
+✅ Generate codes in seconds with AI accuracy
+✅ Avoid penalties with compliant classifications
+✅ Ensure smooth customs processing
+✅ Stay ahead of regulatory changes
+✅ Scale effortlessly with automated tools
+
+VALUE PROPOSITIONS
+-----------------
+
+For Small Stores:
+"Start with 25 free classifications per month. Perfect for small stores getting compliance-ready without upfront costs."
+
+For Growing Businesses:
+"Upgrade to Pro when you're ready to scale. Unlimited codes, bulk tools, and priority support."
+
+For Enterprise:
+"Handle thousands of products with bulk classification, advanced reporting, and dedicated support."
+
+URGENCY MESSAGING
+----------------
+
+Deadline-Focused:
+- "Only X months until August 29, 2025 deadline"
+- "New US tariff regulations take effect soon"
+- "Don't wait until the last minute"
+- "Compliance deadline approaching fast"
+
+Consequence-Focused:
+- "Avoid costly penalties and delays"
+- "Don't risk seized shipments"
+- "Incorrect codes = fines and problems"
+- "Non-compliance costs more than prevention"
+
+CALLS-TO-ACTION
+---------------
+
+For Free Version:
+- "Start Free Today - Get 25 Classifications"
+- "Download Free Plugin Now"
+- "Try Risk-Free - No Credit Card Required"
+- "Get Compliance-Ready for Free"
+
+For Pro Upgrade:
+- "Upgrade to Unlimited Today"
+- "Scale with Pro - Unlimited Codes"
+- "Get Pro for $X/month"
+- "Unlock Full Power - Go Pro Now"
+
+For WordPress.org:
+- "Install Free Plugin"
+- "Download from WordPress.org"
+- "Add to Your WooCommerce Store"
+- "Get Started in Minutes"
+
+SOCIAL PROOF ELEMENTS
+--------------------
+
+Credibility Indicators:
+- "WordPress.org approved plugin"
+- "5-star rated by store owners"
+- "Trusted by X+ WooCommerce stores"
+- "Built by compliance experts"
+
+Trust Signals:
+- "Used by professional importers"
+- "Recommended by customs brokers"
+- "Enterprise-grade security"
+- "GDPR compliant data handling"
+
+OBJECTION HANDLING COPY
+----------------------
+
+"Too Technical?"
+"No technical knowledge needed. One-click generation from your product pages."
+
+"Too Expensive?"
+"Start free with 25 classifications. Upgrade only when you need more."
+
+"Not Accurate Enough?"
+"AI achieves 85-95% accuracy. All codes can be manually reviewed and edited."
+
+"Don't Trust AI?"
+"Every generated code can be verified and customized to your exact needs."
+
+"Already Have HTS Codes?"
+"Plugin works with existing codes. Generate only for new products or verify existing ones."
+
+EMAIL MARKETING SEQUENCES
+-------------------------
+
+Subject Lines:
+- "⚠️ August 2025 Tariff Deadline - Are You Ready?"
+- "Your HTS Code Solution is Here"
+- "Don't Get Caught Off-Guard by New Tariffs"
+- "Free AI Tool for WooCommerce Compliance"
+
+Email 1 - Problem Awareness:
+Subject: "⚠️ August 2025 Tariff Changes - What You Need to Know"
+Preview: "New US regulations require accurate HTS codes..."
+
+Email 2 - Solution Introduction:
+Subject: "How AI Can Solve Your HTS Code Challenge"
+Preview: "Generate accurate codes in seconds..."
+
+Email 3 - Social Proof:
+Subject: "How [Store Name] Automated Their Compliance"
+Preview: "Real results from WooCommerce stores like yours..."
+
+FAQ COPY
+--------
+
+Q: What happens if I exceed my free limit?
+A: You'll see a friendly upgrade prompt. Either wait for next month or upgrade to Pro for unlimited codes.
+
+Q: How accurate are AI-generated codes?
+A: Our AI typically achieves 85-95% accuracy. All codes can be manually reviewed and edited.
+
+Q: Do I need technical skills?
+A: Not at all! One-click generation directly from your WooCommerce product pages.
+
+Q: Is my product data secure?
+A: Yes. We only send necessary product info (name, description) for classification. No customer data ever transmitted.
+
+Q: What if the plugin breaks my site?
+A: The plugin follows WordPress standards and includes comprehensive error handling. Plus, 30-day money-back guarantee on Pro.
+
+COMPETITIVE POSITIONING
+-----------------------
+
+vs Manual Research:
+"Stop spending hours researching codes. Generate accurate classifications in seconds."
+
+vs Other Plugins:
+"Only plugin specifically designed for August 2025 compliance with AI-powered accuracy."
+
+vs Expensive Services:
+"Start free, upgrade when ready. More affordable than hiring compliance consultants."
+
+vs Doing Nothing:
+"Non-compliance costs far more than prevention. Protect your business today."
+
+LANDING PAGE COPY BLOCKS
+------------------------
+
+Hero Section:
+Headline: "Meet the August 29, 2025 Tariff Deadline"
+Subhead: "AI-powered HTS code generation for WooCommerce stores"
+CTA: "Start Free Today"
+
+Feature Section:
+"Generate Accurate Codes in Seconds"
+"Our advanced AI analyzes your products and generates precise HTS codes, ensuring compliance with new US tariff regulations."
+
+Pricing Section:
+"Start Free, Scale When Ready"
+"Try 25 classifications free. Upgrade to Pro for unlimited codes and advanced features."
+
+Testimonial Section:
+"'This plugin saved us hours of research and ensures we're compliant for August 2025.' - [Store Owner]"
+
+WORDPRESS.ORG LISTING COPY
+--------------------------
+
+Description:
+"HTS Manager for WooCommerce uses advanced AI to automatically generate accurate Harmonized Tariff Schedule (HTS) codes for your products, ensuring compliance with US customs regulations and avoiding costly penalties."
+
+Installation Note:
+"Requires Anthropic API key (free tier available). Complete setup instructions included."
+
+Support Note:
+"Free community support through WordPress.org forums. Pro users receive priority email support."
