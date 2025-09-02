@@ -201,6 +201,7 @@ class HTS_Manager {
         
         // PART 8: ADMIN NOTICES
         add_action('admin_notices', array($this, 'product_save_notices'));
+        add_action('admin_notices', array($this, 'usage_limit_notices'));
         
     }
     
@@ -491,6 +492,60 @@ class HTS_Manager {
         if (isset($_POST['_country_of_origin'])) {
             $country = sanitize_text_field($_POST['_country_of_origin']);
             update_post_meta($post_id, '_country_of_origin', $country);
+        }
+    }
+    
+    /**
+     * Display usage limit admin notices
+     */
+    public function usage_limit_notices() {
+        // Only show on relevant admin pages
+        $screen = get_current_screen();
+        if (!$screen || !in_array($screen->id, ['dashboard', 'edit-product', 'product', 'woocommerce_page_hts-manager'])) {
+            return;
+        }
+        
+        // Only show to users who can manage WooCommerce
+        if (!current_user_can('manage_woocommerce')) {
+            return;
+        }
+        
+        // Don't show to pro users
+        if ($this->is_pro()) {
+            return;
+        }
+        
+        $stats = $this->get_usage_stats();
+        $remaining = $stats['remaining'];
+        
+        // Critical - limit reached
+        if ($remaining <= 0) {
+            ?>
+            <div class="notice notice-error">
+                <p><strong>🚨 HTS Manager: Classification limit reached!</strong></p>
+                <p>You've used all <?php echo $stats['limit']; ?> free classifications. 
+                <a href="#" style="text-decoration: none; color: #2271b1;"><strong>Upgrade to Pro</strong></a> for unlimited classifications and advanced features.</p>
+            </div>
+            <?php
+        }
+        // Warning - very low remaining
+        elseif ($remaining <= 3) {
+            ?>
+            <div class="notice notice-warning">
+                <p><strong>⚠️ HTS Manager: Only <?php echo $remaining; ?> classifications remaining!</strong></p>
+                <p><a href="#" style="text-decoration: none; color: #2271b1;">Upgrade to Pro</a> before you run out to avoid interruptions.</p>
+            </div>
+            <?php
+        }
+        // Info - getting close to limit
+        elseif ($remaining <= 5) {
+            ?>
+            <div class="notice notice-info">
+                <p><strong>📊 HTS Manager: <?php echo $remaining; ?> classifications remaining</strong></p>
+                <p>You're using <?php echo $stats['used']; ?>/<?php echo $stats['limit']; ?> free classifications. 
+                <a href="#" style="text-decoration: none;">Consider upgrading to Pro</a> for unlimited usage.</p>
+            </div>
+            <?php
         }
     }
 }
@@ -1428,6 +1483,10 @@ function hts_add_dashboard_widget() {
 function hts_dashboard_widget_display() {
     global $wpdb;
     
+    // Get HTS Manager instance and usage stats
+    $hts_manager = new HTS_Manager();
+    $usage_stats = $hts_manager->get_usage_stats();
+    
     // Get total products
     $total_products = wp_count_posts('product');
     $total_published = $total_products->publish;
@@ -1469,6 +1528,14 @@ function hts_dashboard_widget_display() {
     
     // Define status color based on coverage
     $status_color = $percentage >= 95 ? '#00a32a' : ($percentage >= 80 ? '#dba617' : '#d63638');
+    
+    // Usage tracking colors
+    $usage_color = '#00a32a'; // Default green
+    if (!$usage_stats['is_pro'] && $usage_stats['remaining'] <= 5) {
+        $usage_color = '#d63638'; // Red for low remaining
+    } elseif (!$usage_stats['is_pro'] && $usage_stats['remaining'] <= 10) {
+        $usage_color = '#dba617'; // Yellow for medium remaining
+    }
     
     ?>
     <style>
@@ -1527,9 +1594,107 @@ function hts_dashboard_widget_display() {
             font-size: 12px;
             font-style: italic;
         }
+        .hts-usage-section {
+            background: #f8f9fa;
+            border-left: 4px solid <?php echo $usage_color; ?>;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .hts-usage-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: #1d2327;
+        }
+        .hts-usage-stats {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        .hts-usage-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .hts-usage-fill {
+            height: 100%;
+            background: <?php echo $usage_color; ?>;
+            transition: width 0.3s ease;
+        }
+        .hts-upgrade-button {
+            background: #2271b1;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 3px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        .hts-upgrade-button:hover {
+            background: #135e96;
+            color: white;
+        }
+        .hts-warning-text {
+            color: #d63638;
+            font-weight: 600;
+            margin: 5px 0;
+        }
     </style>
     
     <div class="hts-widget-content">
+        <!-- Usage Statistics Section -->
+        <div class="hts-usage-section">
+            <div class="hts-usage-title">
+                <?php if ($usage_stats['is_pro']): ?>
+                    🚀 Pro Version Active
+                <?php else: ?>
+                    📊 Classification Usage
+                <?php endif; ?>
+            </div>
+            
+            <?php if ($usage_stats['is_pro']): ?>
+                <div class="hts-usage-stats">
+                    <strong>Classifications used: <?php echo number_format($usage_stats['used']); ?> (unlimited)</strong>
+                </div>
+                <div style="color: #00a32a; font-size: 13px;">✨ Unlimited classifications available</div>
+            <?php else: ?>
+                <div class="hts-usage-stats">
+                    <strong>Classifications used: <?php echo $usage_stats['used']; ?>/<?php echo $usage_stats['limit']; ?></strong>
+                </div>
+                
+                <div class="hts-usage-bar">
+                    <div class="hts-usage-fill" style="width: <?php echo min(100, $usage_stats['percentage_used']); ?>%"></div>
+                </div>
+                
+                <div style="font-size: 13px; color: #666;">
+                    <?php echo $usage_stats['remaining']; ?> classifications remaining
+                </div>
+                
+                <?php if ($usage_stats['remaining'] <= 5): ?>
+                    <div class="hts-warning-text">
+                        ⚠️ Only <?php echo $usage_stats['remaining']; ?> classifications left!
+                    </div>
+                <?php elseif ($usage_stats['remaining'] <= 10): ?>
+                    <div style="color: #dba617; font-weight: 500;">
+                        ⚡ <?php echo $usage_stats['remaining']; ?> classifications remaining
+                    </div>
+                <?php endif; ?>
+                
+                <?php if ($usage_stats['remaining'] <= 0): ?>
+                    <a href="#" class="hts-upgrade-button">🚀 Upgrade to Pro - Unlimited</a>
+                <?php elseif ($usage_stats['remaining'] <= 5): ?>
+                    <a href="#" class="hts-upgrade-button">Upgrade for Unlimited</a>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+        
+        <!-- Product Coverage Section -->
         <div class="hts-progress-bar">
             <div class="hts-progress-fill" style="width: <?php echo $percentage; ?>%">
                 <?php echo $percentage; ?>%
