@@ -1857,7 +1857,13 @@ function hts_dashboard_widget_display()
         FROM {$wpdb->postmeta} pm
         JOIN {$wpdb->posts} p ON pm.post_id = p.ID
         WHERE pm.meta_key = '_hts_confidence' 
-        AND CAST(pm.meta_value AS DECIMAL(3,2)) < 0.60
+        AND pm.meta_value <> ''
+        AND CASE
+            WHEN LOCATE('%', pm.meta_value) > 0
+                OR CAST(pm.meta_value AS DECIMAL(10,4)) > 1
+            THEN CAST(REPLACE(pm.meta_value, '%', '') AS DECIMAL(10,4)) / 100
+            ELSE CAST(pm.meta_value AS DECIMAL(10,4))
+        END < 0.60
         AND p.post_status = 'publish'
         AND p.post_type = 'product'
     ");
