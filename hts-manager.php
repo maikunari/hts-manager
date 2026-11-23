@@ -3,7 +3,7 @@
 /**
  * Plugin Name: HTS Manager for WooCommerce FF 
  * Description: Complete HTS code management - display, auto-classify, and ShipStation integration
- * Version: 3.0.4
+ * Version: 3.0.5
  * Author: Mike Sewell
  * License: GPL v2 or later
  */
@@ -16,6 +16,23 @@ if (!defined('ABSPATH')) {
 // Define pro version flag - set to true for pro version
 if (!defined('HTS_MANAGER_PRO')) {
     define('HTS_MANAGER_PRO', false);
+}
+
+/**
+ * Confidence is stored two ways: a 0-1 fraction (current classifier) and a
+ * "85.0%" string (older bulk imports, ~5.8k products). Return a 0-1 float.
+ */
+function hts_normalize_confidence($value)
+{
+    if ($value === '' || $value === null || $value === false) {
+        return 0.0;
+    }
+    $is_percent = is_string($value) && strpos($value, '%') !== false;
+    $number = (float) preg_replace('/[^0-9.]/', '', (string) $value);
+    if ($is_percent || $number > 1) {
+        $number = $number / 100;
+    }
+    return max(0.0, min(1.0, $number));
 }
 
 // Initialize the plugin
@@ -113,7 +130,7 @@ function hts_add_product_data_fields()
     // Check if product has an HTS code
     $hts_code = get_post_meta($post->ID, '_hts_code', true);
     $country_of_origin = get_post_meta($post->ID, '_country_of_origin', true);
-    $hts_confidence = get_post_meta($post->ID, '_hts_confidence', true);
+    $hts_confidence = hts_normalize_confidence(get_post_meta($post->ID, '_hts_confidence', true));
     $hts_updated = get_post_meta($post->ID, '_hts_updated', true);
 
     // Default country to Canada if not set
@@ -2053,7 +2070,7 @@ function hts_product_save_notices()
                     </div>
                     <?php
                 } elseif (!empty($hts_code)) {
-                    $confidence = get_post_meta($post->ID, '_hts_confidence', true);
+                    $confidence = hts_normalize_confidence(get_post_meta($post->ID, '_hts_confidence', true));
                     if ($confidence && $confidence < 0.60) {
                         ?>
                         <div class="notice notice-warning is-dismissible">
